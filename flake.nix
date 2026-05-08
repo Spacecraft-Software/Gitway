@@ -259,7 +259,9 @@
       # NixOS module — installs the package into `environment.systemPackages`
       # and registers the hardened user unit via `systemd.user.services`.
       # Enable with `services.gitway-agent.enable = true;` in your NixOS
-      # configuration.
+      # configuration.  `defaultLifetime` and `extraArgs` mirror the
+      # home-manager module so callers can pick the scope that suits their
+      # deployment without losing TTL or extra-flag control.
       nixosModules.default = { config, pkgs, lib, ... }:
         let
           cfg    = config.services.gitway-agent;
@@ -274,6 +276,24 @@
               default     = gitway;
               defaultText = lib.literalExpression "gitway.packages.\${system}.default";
               description = "The gitway package to use for the agent.";
+            };
+
+            defaultLifetime = lib.mkOption {
+              type        = lib.types.nullOr lib.types.int;
+              default     = null;
+              example     = 3600;
+              description = ''
+                Default TTL (seconds) applied to every key added to the agent.
+                `null` disables the default TTL; per-key overrides via
+                `gitway-add -t <sec>` still work.
+              '';
+            };
+
+            extraArgs = lib.mkOption {
+              type        = lib.types.listOf lib.types.str;
+              default     = [ ];
+              example     = [ "--verbose" ];
+              description = "Extra arguments passed to `gitway agent start`.";
             };
           };
 
@@ -298,7 +318,17 @@
 
               serviceConfig = {
                 Type       = "simple";
-                ExecStart  = "${cfg.package}/bin/gitway agent start -D -s -a %t/gitway-agent.sock";
+                ExecStart  = lib.concatStringsSep " " (
+                  [
+                    "${cfg.package}/bin/gitway"
+                    "agent" "start"
+                    "-D" "-s"
+                    "-a" "%t/gitway-agent.sock"
+                  ]
+                  ++ lib.optionals (cfg.defaultLifetime != null)
+                       [ "-t" (toString cfg.defaultLifetime) ]
+                  ++ cfg.extraArgs
+                );
                 Restart    = "on-failure";
                 RestartSec = 2;
 
