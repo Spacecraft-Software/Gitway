@@ -113,9 +113,9 @@ dependencies = [
 
 [[package]]
 name = "anvil-ssh"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae8171e8f39ed9baf0c8156d3bb760cbefe61b0516406a9ce2540e15e2057fdb"
+checksum = "6a4ce8c80949fefeed4a5902a7277a12c4ec6618a6c49c6acaa85a96f72bb8cb"
 dependencies = [
  "async-trait",
  "base64",
@@ -963,7 +963,7 @@ dependencies = [
 
 [[package]]
 name = "gitway"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "anvil-ssh",
  "clap",
@@ -985,7 +985,7 @@ dependencies = [
 
 [[package]]
 name = "gitway-lib"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "anvil-ssh",
 ]

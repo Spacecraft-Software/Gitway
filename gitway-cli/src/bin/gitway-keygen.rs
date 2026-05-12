@@ -592,9 +592,12 @@ fn run_check_novalidate(p: &Parsed) -> Result<u32, AnvilError> {
 }
 
 fn run_find_principals(p: &Parsed) -> Result<u32, AnvilError> {
-    let Some(ns) = p.namespace.clone() else {
-        return Err(AnvilError::invalid_config("-n NAMESPACE is required"));
-    };
+    // `-n` is intentionally optional here. Upstream `ssh-keygen(1)` SYNOPSIS
+    // for `-Y find-principals` is `-s sig -f allowed_signers` with no `-n` —
+    // namespace filtering is part of sign / verify / check-novalidate, not
+    // find-principals. Git's commit-verification path relies on the no-`-n`
+    // form, so requiring it here would make `git log --show-signature`
+    // report "Bad signature" for every otherwise-valid signature.
     let Some(sig_path) = p.signature_file.clone() else {
         return Err(AnvilError::invalid_config("-s SIG is required"));
     };
@@ -605,7 +608,10 @@ fn run_find_principals(p: &Parsed) -> Result<u32, AnvilError> {
         .ok_or_else(|| AnvilError::invalid_config("-f or --allowed-signers is required"))?;
     let armored = fs::read_to_string(&sig_path)?;
     let allowed = AllowedSigners::load(&allowed_path)?;
-    let principals = sshsig::find_principals(&armored, &allowed, &ns)?;
+    let principals = match p.namespace.as_deref() {
+        Some(ns) => sshsig::find_principals(&armored, &allowed, ns)?,
+        None => sshsig::find_principals_any_ns(&armored, &allowed)?,
+    };
     for p in principals {
         println!("{p}");
     }

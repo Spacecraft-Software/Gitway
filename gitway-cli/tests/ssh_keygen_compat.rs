@@ -346,6 +346,46 @@ fn check_novalidate_accepts_separated_o_value_for_compat() {
 }
 
 #[test]
+fn find_principals_without_namespace_matches_git_invocation() {
+    // Git's commit-verification path runs `ssh-keygen -Y find-principals
+    // -s <sig> -f <allowed>` with no `-n` (per ssh-keygen(1) SYNOPSIS).
+    // Reject the no-`-n` form and git renders the otherwise-valid signature
+    // as "Bad signature" — exactly the regression this test guards against.
+    let dir = TempDir::new().unwrap();
+    let key_path = generate_test_key(&dir);
+    let pub_path = key_path.with_extension("pub");
+    let sig_path = dir.path().join("sig");
+    let allowed_path = dir.path().join("allowed_signers");
+    let payload = b"find-principals without -n";
+
+    sign_to_file(&key_path, "git", payload, &sig_path);
+    write_allowed_signers_for(&pub_path, "user@example.com", "git", &allowed_path);
+
+    let output = Command::new(gitway_keygen())
+        .args([
+            "-Y",
+            "find-principals",
+            "-s",
+            sig_path.to_str().unwrap(),
+            "-f",
+            allowed_path.to_str().unwrap(),
+        ])
+        .output()
+        .expect("failed to spawn gitway-keygen -Y find-principals");
+    assert!(
+        output.status.success(),
+        "find-principals (no -n) exit={:?}, stderr={:?}",
+        output.status.code(),
+        String::from_utf8_lossy(&output.stderr),
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("user@example.com"),
+        "expected principal in stdout, got {stdout:?}"
+    );
+}
+
+#[test]
 fn find_principals_accepts_packed_o_verify_time() {
     let dir = TempDir::new().unwrap();
     let key_path = generate_test_key(&dir);

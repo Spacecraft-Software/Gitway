@@ -310,6 +310,14 @@ Installs `gitway`, `gitway-keygen`, and `gitway-add` into
 `~/.nix-profile/bin/`. Upgrade later with
 `nix profile upgrade gitway`.
 
+> **Already installed an older version and still seeing it after re-running
+> `nix profile install`?** `nix profile install` is idempotent — if Gitway is
+> already in the profile, it will not re-fetch the flake. Run
+> `nix profile upgrade gitway` to pick up new releases. If
+> `which -a gitway` shows a `~/.cargo/bin/gitway` *ahead* of the Nix profile
+> path, an older `cargo install` is shadowing it — `cargo uninstall gitway
+> gitway-keygen` (followed by `hash -r`) removes it.
+
 **One-shot run without installing:**
 ```sh
 nix run github:steelbore/gitway -- --test
