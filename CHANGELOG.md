@@ -6,6 +6,33 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-05-12
+
+A patch release that fixes commit-signature verification when
+`gpg.ssh.program=gitway-keygen` is configured.
+
+### Fixed
+
+- `gitway-keygen -Y find-principals` now works without `-n`, matching
+  git's verification path.  Previously, `git log --show-signature` /
+  `git verify-commit` reported otherwise-valid signatures as **"Bad
+  signature"** because the shim required `-n NAMESPACE` for
+  find-principals.  Per `ssh-keygen(1)`, the SYNOPSIS for `-Y
+  find-principals` is `-s <sig> -f <allowed_signers>` — namespace
+  filtering applies to `sign` / `verify` / `check-novalidate`, not
+  find-principals.  The strict namespace-aware variant remains
+  available when `-n` is supplied.
+
+### Changed
+
+- Bumped `anvil-ssh` 1.0.0 → 1.0.1 (additive, SemVer-compatible).
+  Adds the namespace-agnostic siblings
+  `sshsig::find_principals_any_ns` and
+  `AllowedSigners::find_principals_any_ns`, which ignore per-entry
+  `namespaces="..."` restrictions — matching upstream
+  `ssh-keygen -Y find-principals`.  The namespace-aware functions
+  are unchanged.
+
 ### Added
 
 - `nixosModules.default` now exposes `defaultLifetime` and `extraArgs`,
@@ -13,6 +40,15 @@ this project adheres to [Semantic Versioning](https://semver.org/).
   set a 24-hour key TTL or pass extra flags to `gitway agent start`
   without overriding `systemd.user.services.gitway-agent.serviceConfig.ExecStart`
   with `lib.mkForce`.
+
+### Docs
+
+- README's NixOS install section documents the common
+  *"`nix profile install github:steelbore/gitway` still gives an
+  older version"* gotcha.  Typical cause is a stale flake-input pin
+  in a NixOS or home-manager config that hasn't been updated since
+  the older release — `nix flake update gitway && nixos-rebuild
+  switch` (or `home-manager switch`) fixes it.
 
 ## [1.0.0] — 2026-05-05
 
