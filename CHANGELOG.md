@@ -6,6 +6,14 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `nixosModules.default` now exposes `defaultLifetime` and `extraArgs`,
+  mirroring `homeManagerModules.default`.  System-scoped deployments can
+  set a 24-hour key TTL or pass extra flags to `gitway agent start`
+  without overriding `systemd.user.services.gitway-agent.serviceConfig.ExecStart`
+  with `lib.mkForce`.
+
 ## [1.0.0] — 2026-05-05
 
 The first stable release of Gitway: a pure-Rust SSH toolkit for
