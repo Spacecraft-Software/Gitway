@@ -136,7 +136,11 @@ fn transport_json_mode_suppresses_diag_line() {
 #[test]
 fn gitway_keygen_missing_file_emits_diag_line() {
     let output = Command::new(gitway_keygen())
-        .args(["-f", "/spacecraft-software/does-not-exist-gitway-diag-test", "-l"])
+        .args([
+            "-f",
+            "/spacecraft-software/does-not-exist-gitway-diag-test",
+            "-l",
+        ])
         .output()
         .expect("failed to run gitway-keygen");
 
