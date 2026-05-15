@@ -23,6 +23,14 @@ fuzz/target/
 # checked in.  See https://docs.claude.com/en/docs/claude-code/settings.
 .claude/
 
+# AI-agent context docs.  Useful locally to whichever assistant is active
+# but pollute the public repo and grow stale fast.  The README, PRD, and
+# CHANGELOG remain the canonical guidance for humans and tools alike.
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+plan.md
+
 # Nix
 result
 result-*

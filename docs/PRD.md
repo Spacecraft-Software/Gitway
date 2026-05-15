@@ -1,6 +1,6 @@
 # **Gitway — Product Requirements Document**
 
-**Prepared By:** [Mohamed Hammad](mailto:MJ@S3cure.me)  
+**Prepared By:** [Mohamed Hammad](mailto:Mohamed.Hammad@SpacecraftSoftware.org)  
 **Target Start Date:** Apr 3, 2026  
 **Status:** Draft — rev. 2026-04-21 (adds §5.7 Key & agent management)
 

@@ -1,6 +1,6 @@
 # Gitway exit codes
 
-Gitway follows the Steelbore Dual-Mode CLI Standard (SFRS Rule 2)
+Gitway follows the Spacecraft Software Dual-Mode CLI Standard (SFRS Rule 2)
 exit-code conventions.  Every binary in the workspace (`gitway`,
 `gitway-keygen`, `gitway-add`) uses the same numbering.
 

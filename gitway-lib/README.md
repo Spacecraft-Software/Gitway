@@ -2,7 +2,7 @@
 
 > **This crate has been superseded by [`anvil-ssh`](https://crates.io/crates/anvil-ssh).**
 
-The pure-Rust SSH stack that powered Gitway has been extracted into a standalone Steelbore library at [Steelbore/Anvil](https://github.com/Steelbore/Anvil).
+The pure-Rust SSH stack that powered Gitway has been extracted into a standalone Spacecraft Software library at [Spacecraft-Software/Anvil](https://github.com/Spacecraft-Software/Anvil).
 
 ## Migrate
 
@@ -19,6 +19,6 @@ The type names (`GitwaySession`, `GitwayConfig`, `GitwayError`) carry forward un
 
 ## Background
 
-See [Gitway PRD §7.4](https://github.com/steelbore/gitway/blob/main/Gitway-PRD-v1.0.md) for the full extraction plan.
+See [Gitway PRD §7.4](https://github.com/Spacecraft-Software/Gitway/blob/main/Gitway-PRD-v1.0.md) for the full extraction plan.
 
 `gitway-lib 0.9.x` is the final published release under the `gitway-lib` name.  The in-tree `gitway-lib/` directory in the Gitway workspace is now a thin compat shim that re-exports `anvil_ssh::*`; it is not republished to crates.io.

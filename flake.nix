@@ -8,7 +8,7 @@
 #   nix build .#gitway                # explicit package name
 #
 # Install into your NixOS system or home-manager profile:
-#   nix profile install github:steelbore/gitway
+#   nix profile install github:Spacecraft-Software/Gitway
 {
   description = "Pure-Rust SSH toolkit for Git: transport, keys, signing, agent";
 
@@ -52,7 +52,7 @@
 
         meta = {
           description = "Pure-Rust SSH toolkit for Git: transport, keys, signing, agent";
-          homepage    = "https://github.com/steelbore/gitway";
+          homepage    = "https://github.com/Spacecraft-Software/Gitway";
           license     = pkgs.lib.licenses.gpl3Plus;
           # TODO: once the upstream maintainer (github.com/UnbreakableMJ) has a
           # `pkgs.lib.maintainers` entry, list it here.  Nix has no Windows
@@ -195,7 +195,7 @@
             systemd.user.services.gitway-agent = {
               Unit = {
                 Description   = "Gitway SSH agent (user)";
-                Documentation = "https://github.com/steelbore/gitway";
+                Documentation = "https://github.com/Spacecraft-Software/Gitway";
                 # Running alongside OpenSSH's user ssh-agent would race on
                 # SSH_AUTH_SOCK; refuse if both are enabled.
                 Conflicts = [ "ssh-agent.service" ];

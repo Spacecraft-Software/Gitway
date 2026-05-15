@@ -117,7 +117,7 @@ OpenSSH-free key generation and commit signing so `gpg.format=ssh` works without
 - [✓] `#[ignore]` the RSA SSHSIG test with a note — known `ssh-key` 0.6.7 sharp edge. Revisit when `ssh-key` 0.7 ships.
 - [✓] Live smoke test: `gitway-keygen -t ed25519 … && gitway-keygen -Y sign … | gitway-keygen -Y check-novalidate …` exits 0.
 - [✓] `gitway-cli/tests/ssh_keygen_compat.rs` — hermetic sign/verify roundtrip (runs by default), tampered-payload + namespace-mismatch rejection, plus `#[ignore]`'d cross-compat tests that invoke real `ssh-keygen -lf` and `ssh-keygen -Y check-novalidate` against Gitway-produced keys + signatures (cross-checked against OpenSSH 10.x on 2026-04-21 — all pass).
-- [✓] Real GitHub signed-commit end-to-end: validated on 2026-04-21. Commit `ed38804` signed via `gpg.ssh.program=gitway-keygen` returned `{"reason":"valid","verified":true}` from `gh api repos/Steelbore/Gitway/commits/<sha>`. The E2E run uncovered and fixed two shim bugs (see commit history): (1) public-key `-f` input now falls back to the matching private key path (ssh-keygen's convention), (2) `-Y sign` now supports the positional-message-file form (`<msg>` → `<msg>.sig`) that git's `sign_buffer_ssh` uses.
+- [✓] Real GitHub signed-commit end-to-end: validated on 2026-04-21. Commit `ed38804` signed via `gpg.ssh.program=gitway-keygen` returned `{"reason":"valid","verified":true}` from `gh api repos/Spacecraft-Software/Gitway/commits/<sha>`. The E2E run uncovered and fixed two shim bugs (see commit history): (1) public-key `-f` input now falls back to the matching private key path (ssh-keygen's convention), (2) `-Y sign` now supports the positional-message-file form (`<msg>` → `<msg>.sig`) that git's `sign_buffer_ssh` uses.
 
 ### Documentation
 

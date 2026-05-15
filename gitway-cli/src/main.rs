@@ -113,7 +113,7 @@ fn apply_alg_override(
 
 /// Returns `true` when a known agent or CI environment variable is set.
 ///
-/// Detects the full Steelbore SFRS list (M20.2):
+/// Detects the full Spacecraft Software SFRS list (M20.2):
 /// - `AI_AGENT=1` — generic agent flag
 /// - `AGENT=1` — short alias
 /// - `CI=true` — generic CI signal (case-insensitive)
@@ -936,7 +936,7 @@ fn run_install(mode: OutputMode) -> Result<u32, AnvilError> {
 fn run_schema() -> u32 {
     let schema = serde_json::json!({
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "https://github.com/steelbore/gitway/schema/v1",
+        "$id": "https://github.com/Spacecraft-Software/Gitway/schema/v1",
         "title": "gitway",
         "description": "Pure-Rust SSH toolkit for Git: transport, keys, signing, agent",
         "schema_version": JSON_SCHEMA_VERSION,

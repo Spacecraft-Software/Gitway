@@ -204,7 +204,7 @@ source "$HOME/.cargo/env"
 # Build and install gitway
 cargo install gitway   # once published on crates.io
 # — or from source —
-git clone https://github.com/steelbore/gitway && cargo install --path gitway/gitway-cli
+git clone https://github.com/Spacecraft-Software/Gitway && cargo install --path gitway/gitway-cli
 ```
 
 Then register it:

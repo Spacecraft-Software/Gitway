@@ -2,14 +2,14 @@
 
 Pure-Rust SSH toolkit for Git: transport, keys, signing, agent.
 
-[![CI](https://github.com/steelbore/gitway/actions/workflows/ci.yml/badge.svg)](https://github.com/steelbore/gitway/actions/workflows/ci.yml)
+[![CI](https://github.com/Spacecraft-Software/Gitway/actions/workflows/ci.yml/badge.svg)](https://github.com/Spacecraft-Software/Gitway/actions/workflows/ci.yml)
 [![Crates.io: gitway](https://img.shields.io/crates/v/gitway.svg)](https://crates.io/crates/gitway)
 [![Crates.io: anvil-ssh](https://img.shields.io/crates/v/anvil-ssh.svg)](https://crates.io/crates/anvil-ssh)
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
 [![MSRV: 1.88](https://img.shields.io/badge/rustc-1.88%2B-orange.svg)](rust-toolchain.toml)
 
-- **Project page:** [gitway.steelbore.com](https://gitway.steelbore.com/)
-- **Maintainer:** Mohamed Hammad &lt;`Mohamed.Hammad@Steelbore.com`&gt;
+- **Project page:** [SpacecraftSoftware.org/gitway](https://SpacecraftSoftware.org/gitway/)
+- **Maintainer:** Mohamed Hammad &lt;`Mohamed.Hammad@SpacecraftSoftware.org`&gt;
 - **Copyright:** © 2026 Mohamed Hammad — GPL-3.0-or-later (see [LICENSE](LICENSE))
 
 ---
@@ -47,7 +47,7 @@ order, and behaves identically on Linux, macOS, and Windows.
 - **Drop-in replacement** — works with `GIT_SSH_COMMAND` and `core.sshCommand`
   exactly as `ssh` does.
 - **Library crate** — embed [`anvil-ssh`](https://crates.io/crates/anvil-ssh)
-  (the extracted SSH stack at [github.com/Steelbore/Anvil](https://github.com/Steelbore/Anvil))
+  (the extracted SSH stack at [github.com/Spacecraft-Software/Anvil](https://github.com/Spacecraft-Software/Anvil))
   directly in Rust projects for programmatic Git transport.
 - **Single static binary** — no C runtime, no OpenSSL, no system SSH required.
 
@@ -80,7 +80,7 @@ Releases page runs natively on Alpine with no libc dependency.
 **Option A — pre-built binary (recommended):**
 ```sh
 # Download and install the latest release binary
-wget -qO- https://github.com/steelbore/gitway/releases/latest/download/gitway-linux-x86_64.tar.gz \
+wget -qO- https://github.com/Spacecraft-Software/Gitway/releases/latest/download/gitway-linux-x86_64.tar.gz \
   | tar -xz
 sudo install -m755 gitway          /usr/local/bin/gitway
 sudo install -m755 gitway-keygen   /usr/local/bin/gitway-keygen
@@ -219,7 +219,7 @@ and `gitway-keygen`.
 Both steps need an elevated PowerShell (right-click → *Run as administrator*).
 
 1. Download `gitway-v<VERSION>-windows-x86_64.zip` from the
-   [Releases page](https://github.com/steelbore/gitway/releases/latest).
+   [Releases page](https://github.com/Spacecraft-Software/Gitway/releases/latest).
 2. Extract it to `C:\Program Files\Gitway\`:
 
    ```powershell
@@ -298,12 +298,12 @@ a tool such as NSSM or a scheduled task with *Run whether user is logged on or n
 
 ### On NixOS
 
-Gitway exposes a flake at `github:steelbore/gitway`. Three install paths
+Gitway exposes a flake at `github:Spacecraft-Software/Gitway`. Three install paths
 are supported, in order of increasing declarativeness.
 
 **Imperative, per-user — `nix profile`:**
 ```sh
-nix profile install github:steelbore/gitway
+nix profile install github:Spacecraft-Software/Gitway
 ```
 
 Installs `gitway`, `gitway-keygen`, and `gitway-add` into
@@ -320,7 +320,7 @@ Installs `gitway`, `gitway-keygen`, and `gitway-add` into
 
 **One-shot run without installing:**
 ```sh
-nix run github:steelbore/gitway -- --test
+nix run github:Spacecraft-Software/Gitway -- --test
 ```
 
 **Declarative, system-wide — flake input on NixOS:**
@@ -331,7 +331,7 @@ In `/etc/nixos/flake.nix`:
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    gitway.url  = "github:steelbore/gitway";
+    gitway.url  = "github:Spacecraft-Software/Gitway";
   };
 
   outputs = { self, nixpkgs, gitway, ... }: {
@@ -408,7 +408,7 @@ The gitway binary must live somewhere every inherited environment sees:
 the NixOS PAM stack and thus visible to non-interactive shells and GUI
 apps:
 
-- `~/.nix-profile/bin/gitway` — from `nix profile install github:steelbore/gitway`
+- `~/.nix-profile/bin/gitway` — from `nix profile install github:Spacecraft-Software/Gitway`
 - `/etc/profiles/per-user/$USER/bin/gitway` — from home-manager
   `home.packages` (including `services.gitway-agent.enable = true`)
 - `/run/current-system/sw/bin/gitway` — from NixOS
@@ -974,7 +974,7 @@ thing for GUI askpass binaries.
 ## Library usage
 
 Gitway's SSH stack (transport, keys, signing, agent) lives in the
-[Anvil](https://github.com/Steelbore/Anvil) crate, published as
+[Anvil](https://github.com/Spacecraft-Software/Anvil) crate, published as
 [`anvil-ssh`](https://crates.io/crates/anvil-ssh).
 
 Add to `Cargo.toml`:
@@ -1085,7 +1085,7 @@ allocation is released. Private key material in memory is managed by `russh`'s
 ### Standard Linux, macOS, or WSL
 
 ```sh
-git clone https://github.com/steelbore/gitway
+git clone https://github.com/Spacecraft-Software/Gitway
 cd gitway
 
 # Requires a C compiler (gcc) for the aws-lc-rs cryptography crate.
@@ -1099,7 +1099,7 @@ The release binary is at `target/release/gitway`.
 #### Nushell
 
 ```nu
-git clone https://github.com/steelbore/gitway
+git clone https://github.com/Spacecraft-Software/Gitway
 cd gitway
 cargo build --release
 ```
@@ -1107,7 +1107,7 @@ cargo build --release
 #### Ion
 
 ```ion
-git clone https://github.com/steelbore/gitway
+git clone https://github.com/Spacecraft-Software/Gitway
 cd gitway
 cargo build --release
 ```
@@ -1115,7 +1115,7 @@ cargo build --release
 #### Bash / Brush
 
 ```bash
-git clone https://github.com/steelbore/gitway
+git clone https://github.com/Spacecraft-Software/Gitway
 cd gitway
 cargo build --release
 ```

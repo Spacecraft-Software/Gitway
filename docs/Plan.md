@@ -1,6 +1,6 @@
 # Gitway — Project Plan
 
-**Maintainer:** [Mohamed Hammad](mailto:MJ@S3cure.me)
+**Maintainer:** [Mohamed Hammad](mailto:Mohamed.Hammad@SpacecraftSoftware.org)
 **Status:** v0.6.0 shipped (2026-04-21); v0.6.1 follow-ups complete (2026-04-22); v0.6.2 NixOS packaging + failure diagnostic complete (2026-04-22). The OpenSSH-replacement plan including all v0.6.x follow-ups is done.
 
 ---

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 [package]
 name        = "gitway-lib"
-description = "DEPRECATED: superseded by `anvil-ssh` (https://crates.io/crates/anvil-ssh / https://github.com/Steelbore/Anvil).  This in-tree shim re-exports the Anvil API under the legacy `gitway_lib::*` module path."
+description = "DEPRECATED: superseded by `anvil-ssh` (https://crates.io/crates/anvil-ssh / https://github.com/Spacecraft-Software/Anvil).  This in-tree shim re-exports the Anvil API under the legacy `gitway_lib::*` module path."
 keywords    = ["ssh", "git", "deprecated"]
 categories  = ["network-programming", "authentication"]
 readme      = "README.md"

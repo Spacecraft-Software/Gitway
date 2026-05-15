@@ -137,7 +137,7 @@ referenced minor release.
 
 ## Where to ask for help
 
-- **GitHub issues:** https://github.com/Steelbore/Gitway/issues
-- **Anvil issues:** https://github.com/Steelbore/Anvil/issues (for
+- **GitHub issues:** https://github.com/Spacecraft-Software/Gitway/issues
+- **Anvil issues:** https://github.com/Spacecraft-Software/Anvil/issues (for
   library-layer questions about `anvil-ssh`)
 - **Security disclosures:** see `SECURITY.md` at the repo root.

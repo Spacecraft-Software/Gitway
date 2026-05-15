@@ -551,8 +551,8 @@ pub struct HostsListArgs {
     about   = "Pure-Rust SSH toolkit for Git: transport, keys, signing, agent.",
     long_about = None,
     after_help = "\
-Project page:  https://gitway.steelbore.com/
-Maintainer:    Mohamed Hammad <Mohamed.Hammad@Steelbore.com>
+Project page:  https://SpacecraftSoftware.org/gitway/
+Maintainer:    Mohamed Hammad <Mohamed.Hammad@SpacecraftSoftware.org>
 Copyright:     (C) 2026 Mohamed Hammad — GPL-3.0-or-later",
     // Allow unknown arguments beginning with `-o` for OpenSSH compatibility.
     // Any unrecognised args are collected into `extra_opts` below.

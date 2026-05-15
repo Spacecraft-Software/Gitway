@@ -2,8 +2,8 @@
 
 This directory contains packaging manifests for Gitway across Linux distributions.
 
-- **Project page:** [gitway.steelbore.com](https://gitway.steelbore.com/)
-- **Maintainer:** Mohamed Hammad &lt;`Mohamed.Hammad@Steelbore.com`&gt;
+- **Project page:** [SpacecraftSoftware.org/gitway](https://SpacecraftSoftware.org/gitway/)
+- **Maintainer:** Mohamed Hammad &lt;`Mohamed.Hammad@SpacecraftSoftware.org`&gt;
 - **Copyright:** © 2026 Mohamed Hammad — GPL-3.0-or-later
 
 ## systemd user unit
@@ -73,13 +73,13 @@ cargo generate-rpm -p gitway-cli
 Install from the flake at the repo root:
 ```sh
 # Run without installing
-nix run github:steelbore/gitway
+nix run github:Spacecraft-Software/Gitway
 
 # Install into your profile
-nix profile install github:steelbore/gitway
+nix profile install github:Spacecraft-Software/Gitway
 
 # Use in a NixOS module or home-manager
-inputs.gitway.url = "github:steelbore/gitway";
+inputs.gitway.url = "github:Spacecraft-Software/Gitway";
 ```
 
 ## crates.io
@@ -89,7 +89,7 @@ The CLI binary is published as `gitway` from this repository:
 cargo install gitway
 ```
 
-The SSH library has been extracted to [Steelbore/Anvil](https://github.com/Steelbore/Anvil)
+The SSH library has been extracted to [Spacecraft-Software/Anvil](https://github.com/Spacecraft-Software/Anvil)
 and is published separately as [`anvil-ssh`](https://crates.io/crates/anvil-ssh).
 Library users add it directly:
 ```sh
@@ -112,4 +112,4 @@ remain available (not yanked) so older `Cargo.lock` files continue to
 resolve, but new code should depend on `anvil-ssh` directly.
 
 Releasing the library is a separate workflow in the
-[Steelbore/Anvil](https://github.com/Steelbore/Anvil) repo.
+[Spacecraft-Software/Anvil](https://github.com/Spacecraft-Software/Anvil) repo.

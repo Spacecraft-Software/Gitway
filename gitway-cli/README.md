@@ -2,8 +2,8 @@
 
 `gitway` is a pure-Rust SSH toolkit for Git: transport, keys, signing, agent.
 
-- **Project page:** [gitway.steelbore.com](https://gitway.steelbore.com/)
-- **Maintainer:** Mohamed Hammad &lt;`Mohamed.Hammad@Steelbore.com`&gt;
+- **Project page:** [SpacecraftSoftware.org/gitway](https://SpacecraftSoftware.org/gitway/)
+- **Maintainer:** Mohamed Hammad &lt;`Mohamed.Hammad@SpacecraftSoftware.org`&gt;
 - **Copyright:** © 2026 Mohamed Hammad — GPL-3.0-or-later
 
 It is designed as a drop-in replacement for `ssh` in Git workflows with a
@@ -73,9 +73,9 @@ library — extracted from this repo and published as
 anvil-ssh = "0.1"
 ```
 
-Source: <https://github.com/Steelbore/Anvil>.  The legacy `gitway-lib`
+Source: <https://github.com/Spacecraft-Software/Anvil>.  The legacy `gitway-lib`
 0.9.x crate on crates.io is deprecated; migrate by changing the dep to
 `anvil-ssh` and replacing `use gitway_lib::*;` with `use anvil_ssh::*;`
 (types stay the same through Anvil 0.1.x).
 
-Gitway repository and docs: <https://github.com/steelbore/gitway>
+Gitway repository and docs: <https://github.com/Spacecraft-Software/Gitway>

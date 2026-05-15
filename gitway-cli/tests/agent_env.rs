@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Integration tests for agent-env-var auto-detection of JSON output mode
-//! (M20.2, Steelbore SFRS).
+//! (M20.2, Spacecraft Software SFRS).
 //!
 //! Gitway's `is_agent_or_ci_env` (in `gitway-cli/src/main.rs`) auto-selects
 //! JSON output mode when any of these are set in the process environment:

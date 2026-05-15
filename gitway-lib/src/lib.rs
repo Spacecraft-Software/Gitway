@@ -5,7 +5,7 @@
 //! [`anvil-ssh`](https://crates.io/crates/anvil-ssh).  This crate is a
 //! thin compatibility shim that re-exports the entire Anvil API under
 //! the legacy `gitway_lib::*` module path for one major version per
-//! [Gitway PRD §7.4](https://github.com/steelbore/gitway/blob/main/Gitway-PRD-v1.0.md).
+//! [Gitway PRD §7.4](https://github.com/Spacecraft-Software/Gitway/blob/main/Gitway-PRD-v1.0.md).
 //!
 //! Migrate by updating your `Cargo.toml`:
 //!
@@ -20,12 +20,12 @@
 //! the migration is mechanical.  They will rename to `Anvil*` with
 //! their own `#[deprecated]` aliases in Anvil `0.2.0`.
 //!
-//! Source repo for the library: <https://github.com/Steelbore/Anvil>.
+//! Source repo for the library: <https://github.com/Spacecraft-Software/Anvil>.
 
 #![forbid(unsafe_code)]
 #![deprecated(
     since = "1.0.0",
-    note = "use the `anvil-ssh` crate directly; see https://github.com/Steelbore/Anvil"
+    note = "use the `anvil-ssh` crate directly; see https://github.com/Spacecraft-Software/Anvil"
 )]
 
 pub use anvil_ssh::*;

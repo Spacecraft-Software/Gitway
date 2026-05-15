@@ -1,6 +1,6 @@
 # Gitway error-hint contract — `tips-thinking`
 
-Gitway follows the Steelbore agentic-CLI convention of pairing every
+Gitway follows the Spacecraft Software agentic-CLI convention of pairing every
 error with an actionable `hint` ("what to do next") line.  The
 hint surface is **advisory** for v1.0 — text content may change
 between releases.

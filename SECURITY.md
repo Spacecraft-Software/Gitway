@@ -8,19 +8,19 @@ the confidential channels below.
 
 ### Preferred — GitHub Security Advisories
 
-Visit https://github.com/Steelbore/Gitway/security/advisories and
+Visit https://github.com/Spacecraft-Software/Gitway/security/advisories and
 click **Report a vulnerability**.  This opens a private issue
 visible only to the project maintainers.
 
 For library-layer issues that originate in the `anvil-ssh` crate
 (transport, host-key handling, agent, signing primitives), please
-file at https://github.com/Steelbore/Anvil/security/advisories
+file at https://github.com/Spacecraft-Software/Anvil/security/advisories
 instead.  When in doubt, file with Gitway and we'll route it.
 
 ### Email fallback
 
 If GitHub Security Advisories are unavailable, email
-**[security@steelbore.com](mailto:security@steelbore.com)** with:
+**[Mohamed.Hammad@SpacecraftSoftware.org](mailto:Mohamed.Hammad@SpacecraftSoftware.org)** with:
 
 - A clear description of the vulnerability
 - Reproduction steps (a minimal proof-of-concept if possible)

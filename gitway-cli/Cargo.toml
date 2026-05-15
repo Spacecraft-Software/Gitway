@@ -5,7 +5,7 @@ description = "Pure-Rust SSH toolkit for Git: transport, keys, signing, agent."
 keywords    = ["ssh", "git", "github", "gitlab", "cli"]
 categories  = ["command-line-utilities", "network-programming"]
 readme      = "README.md"
-documentation = "https://github.com/steelbore/gitway#readme"
+documentation = "https://github.com/Spacecraft-Software/Gitway#readme"
 
 version.workspace      = true
 edition.workspace      = true
@@ -67,7 +67,7 @@ assets = [
 workspace = true
 
 [dependencies]
-# Foundation library — extracted to Steelbore/Anvil and published as
+# Foundation library — extracted to Spacecraft-Software/Anvil and published as
 # `anvil-ssh` on crates.io.  See PRD §7.4 / §13.5.  The in-tree
 # `gitway-lib/` workspace member is a deprecated compat shim that
 # re-exports `anvil_ssh::*`; new code uses `anvil-ssh` directly.
