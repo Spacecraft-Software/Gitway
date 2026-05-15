@@ -5,19 +5,19 @@ exclude  = ["fuzz"]
 resolver = "2"
 
 [workspace.package]
-version    = "1.0.1"
+version    = "1.0.2"
 edition    = "2021"
 license    = "GPL-3.0-or-later"
-authors    = ["Mohamed Hammad <MJ@S3cure.me>"]
-repository = "https://github.com/steelbore/gitway"
-homepage   = "https://github.com/steelbore/gitway"
+authors    = ["Mohamed Hammad <Mohamed.Hammad@SpacecraftSoftware.org>"]
+repository = "https://github.com/Spacecraft-Software/Gitway"
+homepage   = "https://github.com/Spacecraft-Software/Gitway"
 rust-version = "1.88"
 
 # ── Shared dependencies ───────────────────────────────────────────────────────
 
 [workspace.dependencies]
-# Anvil — pure-Rust SSH stack extracted to its own Steelbore repository
-# at https://github.com/Steelbore/Anvil and published as `anvil-ssh` on
+# Anvil — pure-Rust SSH stack extracted to its own Spacecraft Software repository
+# at https://github.com/Spacecraft-Software/Anvil and published as `anvil-ssh` on
 # crates.io.  The in-tree `gitway-lib/` is now a thin compat shim that
 # re-exports the Anvil API under the legacy `gitway_lib::*` module path;
 # new code in this workspace depends on `anvil-ssh` directly.  See PRD

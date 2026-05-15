@@ -6,6 +6,25 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.2] — 2026-05-15
+
+A maintenance release that updates project metadata after the
+parent organization rename.  No code-behavior changes.
+
+### Changed
+
+- Repository moved from `github.com/steelbore/gitway` to
+  `github.com/Spacecraft-Software/Gitway`; `Cargo.toml`
+  `repository` / `homepage`, README badges and links, CI/release
+  workflow URLs, packaging metadata (Arch PKGBUILDs), and all
+  in-source comments and docs now point at the new org.
+- Maintainer email updated to
+  `Mohamed.Hammad@SpacecraftSoftware.org`.
+- Anvil's extracted SSH stack is now referenced as
+  [`Spacecraft-Software/Anvil`](https://github.com/Spacecraft-Software/Anvil)
+  throughout.  The `anvil-ssh` crate name and 1.0.1 pin are
+  unchanged.
+
 ## [1.0.1] — 2026-05-12
 
 A patch release that fixes commit-signature verification when
@@ -44,7 +63,7 @@ A patch release that fixes commit-signature verification when
 ### Docs
 
 - README's NixOS install section documents the common
-  *"`nix profile install github:steelbore/gitway` still gives an
+  *"`nix profile install github:Spacecraft-Software/Gitway` still gives an
   older version"* gotcha.  Typical cause is a stale flake-input pin
   in a NixOS or home-manager config that hasn't been updated since
   the older release — `nix flake update gitway && nixos-rebuild
