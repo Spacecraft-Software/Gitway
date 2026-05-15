@@ -20,6 +20,15 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  # Force JS-based actions onto Node 24.  We've bumped every first-party
+  # `actions/*` action to a major that defaults to Node 24, but
+  # `ilammy/setup-nasm@v1` (used on Windows for aws-lc-rs) still declares
+  # `using: node20` and the maintainer hasn't shipped a Node 24 release —
+  # see https://github.com/ilammy/setup-nasm/issues/45.  This env var is a
+  # transitional flag that GitHub Actions honours until Node 20 is removed
+  # on 2026-09-16, after which it becomes a no-op.  Drop this line once
+  # setup-nasm ships a v2 on Node 24.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   # Override `.cargo/config.toml`'s `rustflags = ["-C", "target-cpu=native"]`
   # for CI.  GitHub Actions runner pools are heterogeneous: a build artifact
   # compiled on a runner with newer instructions (e.g. AVX-512) gets cached,
@@ -40,7 +49,7 @@ jobs:
     name: cargo check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -48,7 +57,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo registry
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -77,7 +86,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -101,7 +110,7 @@ jobs:
         uses: ilammy/setup-nasm@v1
 
       - name: Cache cargo registry
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -126,7 +135,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -139,7 +148,7 @@ jobs:
         uses: ilammy/setup-nasm@v1
 
       - name: Cache cargo registry
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -162,7 +171,7 @@ jobs:
     name: binary size ≤ 12 MB (S2)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -170,7 +179,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo registry
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -196,13 +205,13 @@ jobs:
   # Guards against the flake drifting from the workspace Cargo.toml (stale
   # version, wrong build flags, broken meta).  Runs `nix flake check` + a
   # full `nix build .#default` so any NixOS user following the README's
-  # `nix profile install github:steelbore/gitway` recipe gets a working
-  # binary at the current version.
+  # `nix profile install github:Spacecraft-Software/Gitway` recipe gets a
+  # working binary at the current version.
   nix-flake:
     name: nix flake check + build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -230,7 +239,7 @@ jobs:
     name: cargo check (MSRV 1.88)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -238,7 +247,7 @@ jobs:
         uses: dtolnay/rust-toolchain@1.88
 
       - name: Cache cargo registry
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -259,7 +268,7 @@ jobs:
     name: cargo-deny (licenses + advisories + bans + sources)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
 

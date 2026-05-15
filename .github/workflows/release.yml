@@ -19,8 +19,9 @@
 #
 #   crates.io publish  (publish job)
 #     Publishes the gitway CLI crate after the release is created.
-#     The library was extracted to Steelbore/Anvil and is released on
-#     its own workflow there (see https://github.com/Steelbore/Anvil).
+#     The library was extracted to Spacecraft-Software/Anvil and is
+#     released on its own workflow there (see
+#     https://github.com/Spacecraft-Software/Anvil).
 #     Requires the CARGO_REGISTRY_TOKEN secret.
 
 name: Release
@@ -32,6 +33,13 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  # Force JS-based actions onto Node 24.  Every first-party `actions/*`
+  # action here has been bumped to a major that defaults to Node 24, but
+  # `ilammy/setup-nasm@v1` (Windows nasm setup for aws-lc-rs) still
+  # declares `using: node20` and has no Node 24 release yet — see
+  # https://github.com/ilammy/setup-nasm/issues/45.  This transitional
+  # flag forces Node 24 for it; remove once setup-nasm ships a v2.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   # ── Binary archives ─────────────────────────────────────────────────────────
@@ -70,7 +78,7 @@ jobs:
             archive:  gitway-${{ github.ref_name }}-windows-x86_64.zip
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -98,7 +106,7 @@ jobs:
         uses: ilammy/setup-nasm@v1
 
       - name: Cache cargo registry
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -134,7 +142,7 @@ jobs:
             -DestinationPath ${{ matrix.archive }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.archive }}
           path: ${{ matrix.archive }}
@@ -144,7 +152,7 @@ jobs:
     name: build .deb
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -152,7 +160,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo registry
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -174,7 +182,7 @@ jobs:
         run: echo "path=$(ls target/debian/*.deb)" >> "$GITHUB_OUTPUT"
 
       - name: Upload .deb artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: gitway-${{ github.ref_name }}-linux-x86_64.deb
           path: ${{ steps.deb.outputs.path }}
@@ -184,7 +192,7 @@ jobs:
     name: build .rpm
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -192,7 +200,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo registry
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -214,7 +222,7 @@ jobs:
         run: echo "path=$(ls target/generate-rpm/*.rpm)" >> "$GITHUB_OUTPUT"
 
       - name: Upload .rpm artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: gitway-${{ github.ref_name }}-linux-x86_64.rpm
           path: ${{ steps.rpm.outputs.path }}
@@ -230,17 +238,17 @@ jobs:
       # Expose the release URL so the publish job can link to it.
       release_url: ${{ steps.create.outputs.url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: artifacts
           merge-multiple: true
 
       - name: Create draft release
         id: create
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           draft: true
           generate_release_notes: true
@@ -254,7 +262,7 @@ jobs:
     needs: release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -262,7 +270,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo registry
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -270,8 +278,9 @@ jobs:
           key: ubuntu-cargo-publish-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ubuntu-cargo-publish-
 
-      # The library lives in Steelbore/Anvil and is released on its own
-      # workflow there.  This job only publishes the gitway CLI crate.
+      # The library lives in Spacecraft-Software/Anvil and is released on
+      # its own workflow there.  This job only publishes the gitway CLI
+      # crate.
       - name: Publish gitway
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
