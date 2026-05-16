@@ -6,6 +6,28 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.3] — 2026-05-16
+
+A patch release bumping `anvil-ssh` to its SemVer-corrected 1.1.0
+release and aligning the in-tree diagnostic-test fixture path with
+the canonical `/spacecraft-software/` prefix.  No
+production-code-behavior changes.
+
+### Changed
+
+- **`anvil-ssh` 1.0.1 → 1.1.0.**  No public-API change: 1.1.0 is the
+  SemVer-correctness re-release of 1.0.1.  The 1.0.1 patch bump
+  introduced two new public symbols (`sshsig::find_principals_any_ns`,
+  `AllowedSigners::find_principals_any_ns`); the Anvil maintainer
+  republished the same code as 1.1.0 to honor the 1.0.0 commitment
+  that patch bumps add no API.  The `find_principals_any_ns` call
+  site in `gitway-keygen` continues to behave identically.
+- **Diagnostic-shim test fixture path** for `gitway-keygen` and
+  `gitway-add` is now `/spacecraft-software/does-not-exist-gitway-diag-test`
+  (was `/steelbore/...`), completing the umbrella Steelbore →
+  Spacecraft Software rename.  Test-only change; production behavior
+  unchanged.
+
 ## [1.0.2] — 2026-05-15
 
 A maintenance release that updates project metadata after the
