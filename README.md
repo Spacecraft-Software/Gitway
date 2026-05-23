@@ -89,9 +89,13 @@ sudo install -m755 gitway-add      /usr/local/bin/gitway-add
 
 **Option B — build from source:**
 ```sh
-apk add cargo gcc perl pkgconf
-cargo install gitway gitway-keygen
+apk add gcc perl pkgconf
+cargo install gitway
 ```
+
+Alpine's packaged Rust toolchain may be older than 1.88 (the MSRV). Install a
+current toolchain via [rustup](https://rustup.rs) and retry — `apk add cargo`
+is not needed if you use rustup.
 
 ### On Arch Linux
 
@@ -177,7 +181,7 @@ sudo install -m755 gitway-add      /usr/local/bin/gitway-add
 **Build from source:**
 ```sh
 emerge dev-lang/rust
-cargo install gitway gitway-keygen
+cargo install gitway
 ```
 
 ### On openSUSE
@@ -271,7 +275,7 @@ Install it before running `cargo install`:
 winget install nasm
 # or: choco install nasm
 # then restart the terminal so nasm.exe is on PATH
-cargo install gitway gitway-keygen
+cargo install gitway
 ```
 
 `cargo install` writes to `%USERPROFILE%\.cargo\bin\`, which is on User
