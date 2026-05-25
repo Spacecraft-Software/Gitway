@@ -10,7 +10,7 @@
 # Project page:  https://SpacecraftSoftware.org/gitway/
 
 pkgname=gitway-bin
-pkgver=0.9.0
+pkgver=1.0.4
 pkgrel=1
 pkgdesc="Pure-Rust SSH toolkit for Git: transport, keys, signing, agent"
 arch=('x86_64')
@@ -24,7 +24,7 @@ source=(
 )
 # Update sha256sums by running: updpkgsums
 # or manually:  sha256sum gitway-bin-${pkgver}.tar.gz
-sha256sums=('b54e51c7d686cd45ff13989f04a8036882d4ec67d08998986e7f39804a4e9f3c')
+sha256sums=('ccc78b6e0c74d37b386f3b618bb85ce26ff322b83ba39a61a6c2d80094755724')
 
 package() {
   cd "${srcdir}"
