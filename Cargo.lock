@@ -963,7 +963,7 @@ dependencies = [
 
 [[package]]
 name = "gitway"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "anvil-ssh",
  "clap",
@@ -985,7 +985,7 @@ dependencies = [
 
 [[package]]
 name = "gitway-lib"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "anvil-ssh",
 ]

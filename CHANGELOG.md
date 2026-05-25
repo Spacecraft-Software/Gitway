@@ -6,6 +6,24 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.4] — 2026-05-25
+
+A patch release fixing a SIGILL crash in pre-built binaries on machines
+whose CPU does not support the instruction set of the GitHub Actions build
+runner.
+
+### Fixed
+
+- **Pre-built binaries no longer crash with `SIGILL` on end-user machines.**
+  `.cargo/config.toml` sets `target-cpu=native` for local dev performance;
+  the release workflow was missing the `RUSTFLAGS=""` override that `ci.yml`
+  already carried.  As a result, the shipped Linux musl binary was compiled
+  against the GitHub runner's native CPU (potentially including AVX-512 or
+  other extensions) and crashed with `SIGILL` on any machine lacking those
+  instructions.  Confirmed on Arch Linux: `gitway-add -l` → core dumped,
+  SIGILL.  The release workflow now sets `RUSTFLAGS=""` so all released
+  binaries target the generic x86_64 / arm64 baseline.
+
 ## [1.0.3] — 2026-05-16
 
 A patch release bumping `anvil-ssh` to its SemVer-corrected 1.1.0
