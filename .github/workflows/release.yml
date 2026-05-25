@@ -40,6 +40,16 @@ env:
   # https://github.com/ilammy/setup-nasm/issues/45.  This transitional
   # flag forces Node 24 for it; remove once setup-nasm ships a v2.
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  # Override `.cargo/config.toml`'s `rustflags = ["-C", "target-cpu=native"]`.
+  # Release binaries must run on any user machine, not just the CPU the GitHub
+  # Actions runner happens to have.  Without this override the musl binary can
+  # be compiled with AVX-512 or other runner-specific extensions and crash with
+  # SIGILL on machines that lack them (confirmed: Arch Linux gitway-add → SIGILL).
+  # Setting RUSTFLAGS (even to an empty string) makes Cargo ignore the
+  # [build] rustflags table in .cargo/config.toml, so rustc falls back to its
+  # default generic baseline.  Local-dev behaviour is unaffected — devs still
+  # get target-cpu=native via the config file unless they export RUSTFLAGS.
+  RUSTFLAGS: ""
 
 jobs:
   # ── Binary archives ─────────────────────────────────────────────────────────
