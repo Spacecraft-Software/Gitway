@@ -129,8 +129,10 @@ jobs:
 
       # `-p gitway` builds both [[bin]] targets in gitway-cli (gitway and
       # gitway-keygen) in one cargo invocation since they share codegen.
+      # `--features biometric` ships the platform fingerprint backends (cfg-gated
+      # per target; the musl-clean zbus/oo7 stack keeps the static Linux build).
       - name: Build release binaries
-        run: cargo build --release --target ${{ matrix.target }} -p gitway
+        run: cargo build --release --target ${{ matrix.target }} -p gitway --features biometric
 
       # ── Package ─────────────────────────────────────────────────────────────
 
@@ -195,7 +197,7 @@ jobs:
         run: cargo install cargo-deb --locked
 
       - name: Build release binary (required by cargo-deb)
-        run: cargo build --release -p gitway
+        run: cargo build --release -p gitway --features biometric
 
       - name: Build .deb package
         run: cargo deb -p gitway --no-build
@@ -235,7 +237,7 @@ jobs:
         run: cargo install cargo-generate-rpm --locked
 
       - name: Build release binary (required by cargo-generate-rpm)
-        run: cargo build --release -p gitway
+        run: cargo build --release -p gitway --features biometric
 
       - name: Build .rpm package
         run: cargo generate-rpm -p gitway-cli

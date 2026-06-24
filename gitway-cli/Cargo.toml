@@ -14,6 +14,13 @@ authors.workspace      = true
 repository.workspace   = true
 rust-version.workspace = true
 
+# Shared library consumed by the binaries below (currently the cross-platform
+# biometric vault).  Same crate name as the package, so the bins reference it as
+# `use gitway::biometric`.
+[lib]
+name = "gitway"
+path = "src/lib.rs"
+
 [[bin]]
 name = "gitway"
 path = "src/main.rs"
@@ -66,6 +73,23 @@ assets = [
 [lints]
 workspace = true
 
+# ── Features ──────────────────────────────────────────────────────────────────
+#
+# `biometric` is OFF by default so a plain `cargo install gitway` stays lean and
+# cannot regress builds on exotic targets.  The official release binaries are
+# built with `--features biometric` (see `.github/workflows/release.yml`).  The
+# feature is additive (M-FEATURES-ADDITIVE): with it off, the `gitway biometric`
+# subcommand still exists and reports "unsupported on this build", and the
+# key-load path falls through to the normal passphrase prompt.
+#
+# The platform crates are declared as platform-gated optional dependencies
+# below; enabling `biometric` only pulls the crate(s) relevant to the target
+# being compiled (Linux never sees `security-framework`, macOS never sees
+# `zbus`/`oo7`, etc.).
+[features]
+default   = []
+biometric = ["dep:zbus", "dep:oo7", "dep:futures-lite", "dep:security-framework", "dep:windows"]
+
 [dependencies]
 # Foundation library — extracted to Spacecraft-Software/Anvil and published as
 # `anvil-ssh` on crates.io.  See PRD §7.4 / §13.5.  The in-tree
@@ -93,6 +117,33 @@ tempfile.workspace          = true
 
 [target.'cfg(unix)'.dependencies]
 nix.workspace = true
+
+# ── Biometric backends (feature = "biometric", platform-gated) ────────────────
+#
+# Linux: fprintd (D-Bus) is the verify gate; the Secret Service keyring
+# (org.freedesktop.secrets) stores the passphrase.  `zbus` (pure-Rust D-Bus,
+# musl-clean) drives the fprintd proxy; `oo7` (rides the same `zbus` stack) is
+# the keyring client.  Avoid the C-FFI `dbus`/`libdbus-sys` route — it would
+# break the static musl release build.
+[target.'cfg(target_os = "linux")'.dependencies]
+zbus = { version = "5", default-features = false, features = ["tokio"], optional = true }
+oo7  = { version = "0.4", optional = true }
+# `StreamExt::next` for the fprintd `VerifyStatus` signal stream.  zbus
+# re-exports only `futures_core` (the `Stream` trait), not an `…Ext` adapter;
+# `futures-lite` is the lightest one and is already in the tree via zbus.
+futures-lite = { version = "2", optional = true }
+
+# macOS: Keychain Services + a biometric-gated `SecAccessControl` (Touch ID
+# prompt fires on read).  `security-framework` exposes the safe API; no `unsafe`
+# in our code.
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = { version = "3", optional = true }
+
+# Windows: Hello consent gate (`UserConsentVerifier`) + `PasswordVault` store,
+# both WinRT (safe projections — no `unsafe` in our code, unlike Win32
+# `CredRead`/`CredWrite`).
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = ["Security_Credentials", "Security_Credentials_UI", "Foundation"], optional = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

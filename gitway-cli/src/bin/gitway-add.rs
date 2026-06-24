@@ -43,6 +43,11 @@ use anvil_ssh::agent::client::Agent;
 use anvil_ssh::keygen::fingerprint;
 use anvil_ssh::AnvilError;
 
+// The cross-platform biometric vault lives in the shared library
+// (`gitway-cli/src/lib.rs`); both `gitway` and `gitway-add` consume it from
+// there so neither binary re-flags the parts it does not use as dead code.
+use gitway::biometric::{self, AutoUnlock, UnlockMode};
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 fn main() -> ExitCode {
@@ -66,6 +71,17 @@ fn main() -> ExitCode {
 }
 
 fn run(args: &[String]) -> Result<u32, AnvilError> {
+    // `--help` is handled before argv parsing (so it never trips the
+    // "unsupported flag" path) and before connecting to the agent.  Usage goes
+    // to stdout with exit 0, matching `gitway --help`.
+    if args
+        .iter()
+        .any(|a| matches!(a.as_str(), "-h" | "--help" | "-?"))
+    {
+        print_help();
+        return Ok(0);
+    }
+
     let parsed = Parsed::from_args(args)?;
     let mut agent = Agent::from_env()?;
 
@@ -75,8 +91,41 @@ fn run(args: &[String]) -> Result<u32, AnvilError> {
         Mode::RemoveAll => remove_all(&mut agent),
         Mode::Lock => lock_unlock(&mut agent, /* lock = */ true),
         Mode::Unlock => lock_unlock(&mut agent, /* lock = */ false),
-        Mode::Add { paths } => add(&mut agent, &paths, parsed.lifetime, parsed.confirm),
+        Mode::Add { paths } => {
+            let unlock = UnlockMode::from_flags(parsed.biometric, parsed.no_biometric);
+            add(&mut agent, &paths, parsed.lifetime, parsed.confirm, unlock)
+        }
     }
+}
+
+/// Print the `--help` usage text to stdout.  Mirrors the supported-argv table
+/// in this file's header; kept in sync by hand (there is no clap here).
+fn print_help() {
+    println!(
+        "gitway-add — load SSH keys into the gitway agent (an ssh-add-compatible shim)
+
+Usage: gitway-add [OPTIONS] [FILE...]
+
+With no FILE, adds the default keys (~/.ssh/id_ed25519, then id_ecdsa, id_rsa).
+A key that is already loaded in the agent is skipped (no passphrase re-prompt).
+
+Options:
+  -l                  List loaded key fingerprints (default when no FILE given)
+  -L                  List loaded public keys in full
+  -d <file>           Remove the identity for <file>
+  -D                  Remove all identities from the agent
+  -x                  Lock the agent with a passphrase
+  -X                  Unlock the agent
+  -t <seconds>        Lifetime for keys added in this invocation (ssh-add -t)
+  -E <sha256|sha512>  Fingerprint hash to display for -l
+  -c                  Require confirmation on each signing request (ssh-add -c)
+  --biometric         Enroll the key for biometric unlock while adding it
+  --no-biometric      Force a typed passphrase even if the key is enrolled
+  -h, --help          Show this help and exit
+
+Keys load into the agent on $SSH_AUTH_SOCK.  Unsupported ssh-add flags are
+accepted and ignored for compatibility."
+    );
 }
 
 // ── Parser ────────────────────────────────────────────────────────────────────
@@ -97,6 +146,8 @@ struct Parsed {
     hash: HashAlg,
     lifetime: Option<Duration>,
     confirm: bool,
+    biometric: bool,
+    no_biometric: bool,
 }
 
 impl Parsed {
@@ -104,6 +155,8 @@ impl Parsed {
         let mut hash = HashAlg::Sha256;
         let mut lifetime: Option<Duration> = None;
         let mut confirm = false;
+        let mut biometric = false;
+        let mut no_biometric = false;
 
         let mut mode: Option<Mode> = None;
         let mut paths: Vec<PathBuf> = Vec::new();
@@ -135,6 +188,14 @@ impl Parsed {
                     confirm = true;
                     i += 1;
                 }
+                "--biometric" => {
+                    biometric = true;
+                    i += 1;
+                }
+                "--no-biometric" => {
+                    no_biometric = true;
+                    i += 1;
+                }
                 "-d" => {
                     // `take` already advances `i` past both the flag and its value.
                     let path = take(args, &mut i, "-d")?;
@@ -142,24 +203,11 @@ impl Parsed {
                 }
                 "-t" => {
                     let secs = take(args, &mut i, "-t")?;
-                    let n: u64 = secs.parse().map_err(|_e: std::num::ParseIntError| {
-                        AnvilError::invalid_config(format!(
-                            "-t requires an integer number of seconds, got {secs:?}"
-                        ))
-                    })?;
-                    lifetime = Some(Duration::from_secs(n));
+                    lifetime = Some(parse_lifetime(&secs)?);
                 }
                 "-E" => {
-                    let v = take(args, &mut i, "-E")?;
-                    hash = match v.to_ascii_lowercase().as_str() {
-                        "sha256" => HashAlg::Sha256,
-                        "sha512" => HashAlg::Sha512,
-                        other => {
-                            return Err(AnvilError::invalid_config(format!(
-                                "-E requires sha256 or sha512, got {other:?}"
-                            )));
-                        }
-                    };
+                    let value = take(args, &mut i, "-E")?;
+                    hash = parse_hash(&value)?;
                 }
                 // Silently-ignored ssh-add flags we do not implement yet.
                 // (These are non-fatal for the CI/IDE integration use
@@ -197,12 +245,41 @@ impl Parsed {
             None => Mode::Add { paths },
         };
 
+        if biometric && no_biometric {
+            return Err(AnvilError::invalid_config(
+                "--biometric conflicts with --no-biometric",
+            ));
+        }
+
         Ok(Self {
             mode,
             hash,
             lifetime,
             confirm,
+            biometric,
+            no_biometric,
         })
+    }
+}
+
+/// Parse the `-t` lifetime argument (an integer number of seconds).
+fn parse_lifetime(secs: &str) -> Result<Duration, AnvilError> {
+    let n: u64 = secs.parse().map_err(|_e: std::num::ParseIntError| {
+        AnvilError::invalid_config(format!(
+            "-t requires an integer number of seconds, got {secs:?}"
+        ))
+    })?;
+    Ok(Duration::from_secs(n))
+}
+
+/// Parse the `-E` fingerprint-hash argument (`sha256` or `sha512`).
+fn parse_hash(value: &str) -> Result<HashAlg, AnvilError> {
+    match value.to_ascii_lowercase().as_str() {
+        "sha256" => Ok(HashAlg::Sha256),
+        "sha512" => Ok(HashAlg::Sha512),
+        other => Err(AnvilError::invalid_config(format!(
+            "-E requires sha256 or sha512, got {other:?}"
+        ))),
     }
 }
 
@@ -305,31 +382,93 @@ fn add(
     paths: &[PathBuf],
     lifetime: Option<Duration>,
     confirm: bool,
+    unlock: UnlockMode,
 ) -> Result<u32, AnvilError> {
+    // Identities the agent already holds — so re-adding a key that is still
+    // loaded can skip the passphrase/biometric prompt entirely.  Best effort:
+    // if the agent cannot be listed (e.g. it is locked), fall through to the
+    // normal add path rather than failing.
+    let loaded = agent.list().unwrap_or_default();
     for path in paths {
-        let key = load_and_decrypt(path)?;
-        agent.add(&key, lifetime, confirm)?;
+        let pem = fs::read_to_string(path)?;
+        let key = PrivateKey::from_openssh(&pem).map_err(|e| {
+            AnvilError::invalid_config(format!("cannot parse {}: {e}", path.display()))
+        })?;
+        // `--biometric` (Enroll) must always run so it can (re)store the
+        // passphrase behind the keystore, even when the key is already loaded.
+        if unlock != UnlockMode::Enroll {
+            let want = fingerprint(key.public_key(), HashAlg::Sha256);
+            if loaded
+                .iter()
+                .any(|id| fingerprint(&id.public_key, HashAlg::Sha256) == want)
+            {
+                println!("Identity already loaded: {}", path.display());
+                continue;
+            }
+        }
+        let decrypted = load_and_decrypt(path, key, unlock)?;
+        agent.add(&decrypted, lifetime, confirm)?;
         println!("Identity added: {}", path.display());
     }
     Ok(0)
 }
 
-fn load_and_decrypt(path: &Path) -> Result<PrivateKey, AnvilError> {
-    let pem = fs::read_to_string(path)?;
-    let key = PrivateKey::from_openssh(&pem)
-        .map_err(|e| AnvilError::invalid_config(format!("cannot parse {}: {e}", path.display())))?;
+/// Decrypt an already-parsed key, honoring the biometric `unlock` mode (mirrors
+/// `gitway agent add`, but with this shim's own passphrase prompt: stdin when
+/// not a TTY, else `rpassword`).
+fn load_and_decrypt(
+    path: &Path,
+    key: PrivateKey,
+    unlock: UnlockMode,
+) -> Result<PrivateKey, AnvilError> {
     if !key.is_encrypted() {
         return Ok(key);
     }
-    let pp: Zeroizing<String> = if let Some(from_stdin) = passphrase_from_stdin_if_not_tty() {
-        from_stdin
-    } else {
-        rpassword::prompt_password(format!("Enter passphrase for {}: ", path.display()))
-            .map(Zeroizing::new)
-            .map_err(AnvilError::from)?
+
+    let decrypt = |pp: &Zeroizing<String>| {
+        key.decrypt(pp.as_bytes())
+            .map_err(|e| AnvilError::signing(format!("decrypt failed: {e}")))
     };
-    key.decrypt(pp.as_bytes())
-        .map_err(|e| AnvilError::signing(format!("decrypt failed: {e}")))
+    let id = biometric::key_id(&key);
+
+    match unlock {
+        UnlockMode::Disabled => decrypt(&prompt_passphrase(path)?),
+        UnlockMode::Enroll => {
+            let pp = prompt_passphrase(path)?;
+            let decrypted = decrypt(&pp)?;
+            match biometric::vault().store(&id, &pp) {
+                Ok(()) => eprintln!(
+                    "gitway-add: enrolled {} for biometric unlock",
+                    path.display()
+                ),
+                Err(e) => eprintln!("gitway-add: warning: biometric enrollment failed: {e}"),
+            }
+            Ok(decrypted)
+        }
+        UnlockMode::Auto => match biometric::auto_unlock_passphrase(&key) {
+            AutoUnlock::Passphrase(pp) => decrypt(&pp),
+            AutoUnlock::Stale => {
+                eprintln!(
+                    "gitway-add: stored biometric passphrase no longer decrypts {} — \
+                     removed stale enrollment",
+                    path.display()
+                );
+                decrypt(&prompt_passphrase(path)?)
+            }
+            AutoUnlock::Fallback => decrypt(&prompt_passphrase(path)?),
+        },
+    }
+}
+
+/// Prompt for a typed passphrase: read from stdin when not a TTY (scripts /
+/// credential managers), otherwise prompt on the terminal via `rpassword`.
+fn prompt_passphrase(path: &Path) -> Result<Zeroizing<String>, AnvilError> {
+    if let Some(from_stdin) = passphrase_from_stdin_if_not_tty() {
+        return Ok(from_stdin);
+    }
+    rpassword::prompt_password(format!("Enter passphrase for {}: ", path.display()))
+        .map(Zeroizing::new)
+        .map_err(AnvilError::from)
 }
 
 /// When stdin is not a terminal (e.g. the shim is invoked from a script),

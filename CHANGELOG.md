@@ -6,6 +6,43 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Biometric (fingerprint) unlock as an alternative to typing a key
+  passphrase** (opt-in `biometric` feature; built into the official binaries).
+  A key's passphrase is stored in the OS secure keystore and released after a
+  local biometric check, so `gitway-add` / `gitway agent add` can unlock an
+  encrypted key with a fingerprint instead of typed input.
+  - New `gitway biometric` subcommand group: `enroll`, `forget`, `list`,
+    `status` (all support `--json`).
+  - New `--biometric` / `--no-biometric` flags on `gitway agent add` and
+    `gitway-add`.  Without a flag, loading is automatic: biometric when the key
+    is enrolled and a backend is available, otherwise a passphrase prompt.
+  - Backends: **Linux** `fprintd` + Secret Service keyring (`zbus` + `oo7`);
+    **macOS** Touch ID + Keychain (`security-framework`); **Windows** Hello +
+    Credential Locker (WinRT).  All `#![forbid(unsafe_code)]`-clean and, on
+    Linux, musl-compatible.
+  - **Security note:** binding strength differs per platform — macOS is
+    hardware-bound (Secure Enclave), Windows is DPAPI + Hello consent, and
+    **Linux is an advisory gate (experimental): the fingerprint does not protect
+    the passphrase, the login keyring does.**  `gitway biometric status` reports
+    the active tier; Linux enrollment prints a one-time disclosure.  See
+    `docs/biometric.md`.
+  - Biometric unlock is purely additive on the Git transport path: a cancelled
+    prompt, an unavailable backend, or a stale enrollment falls back to the
+    passphrase prompt and never blocks a push.
+- **`--help` for the `ssh-add` / `ssh-keygen` shims.**  `gitway-add --help`
+  (also `-h` / `-?`) and `gitway-keygen --help` (also `-?`) now print a usage
+  summary to stdout and exit 0, instead of failing with
+  `error: unsupported flag: --help`.
+
+### Changed
+
+- **`gitway-add` and `gitway agent add` skip a key already loaded** in the agent
+  (matched by public-key fingerprint) instead of re-decrypting it, so re-adding
+  a loaded key no longer re-prompts for the passphrase.  Explicit `--biometric`
+  enrollment still runs.
+
 ## [1.0.4] — 2026-05-25
 
 A patch release fixing a SIGILL crash in pre-built binaries on machines

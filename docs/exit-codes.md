@@ -21,8 +21,14 @@ never change meaning.
 
 | Code | Meaning | Where it fires |
 |---|---|---|
-| **73** | User declined a confirmation prompt | `gitway hosts add` when the user types `n` at the FR-85 fingerprint-confirm prompt. |
-| **78** | Configuration / environment error requiring `--yes` | `gitway hosts add` when stdin is not a TTY (piped, `--json`, agent env detected) and `--yes` was not passed. |
+| **73** | User declined a confirmation prompt | `gitway hosts add` when the user types `n` at the FR-85 fingerprint-confirm prompt; **biometric unlock** when the fingerprint prompt is cancelled or does not match. |
+| **78** | Interactive input required but unavailable | `gitway hosts add` when stdin is not a TTY (piped, `--json`, agent env detected) and `--yes` was not passed; **biometric** enroll / `--biometric` load when no biometric backend is available (no sensor, fprintd, Hello, session bus, or keyring). |
+
+Biometric subcommands also reuse the standard codes: **3** (not found) when
+`gitway biometric forget` targets a key that is not enrolled, and **2** (usage)
+when an enroll passphrase does not decrypt the key.  Auto-mode loads never fail
+on biometric unavailability — they fall back to a passphrase prompt and exit per
+the normal path.
 
 ## Machine-readable surface
 

@@ -16,11 +16,16 @@ static GLOBAL: MiMalloc = MiMalloc;
 
 mod agent;
 mod algorithms;
+mod biometric_cmd;
 mod cli;
 mod config;
 mod hosts;
 mod keygen;
 mod sign;
+
+// The biometric vault lives in the shared library (`src/lib.rs`) so both the
+// `gitway` and `gitway-add` binaries can use it without per-binary dead code.
+use gitway::biometric;
 
 use std::process;
 
@@ -491,6 +496,7 @@ async fn run(cli: Cli) -> Result<u32, AnvilError> {
             GitwaySubcommand::Config(args) => config::run(args.command, mode),
             GitwaySubcommand::Hosts(args) => hosts::run(args.command, mode).await,
             GitwaySubcommand::ListAlgorithms => algorithms::run(mode),
+            GitwaySubcommand::Biometric(args) => biometric_cmd::run(args.command, mode),
         };
     }
 
@@ -1068,9 +1074,10 @@ fn run_schema() -> u32 {
             "0": "Success",
             "1": "General / unexpected error",
             "2": "Usage error (bad arguments or configuration)",
-            "3": "Not found (no identity key, unknown host)",
+            "3": "Not found (no identity key, unknown host, key not enrolled for biometric)",
             "4": "Permission denied (authentication failure, host key mismatch)",
-            "78": "Refusal to act non-interactively without --yes (gitway hosts add)",
+            "73": "User declined a confirmation prompt (gitway hosts add; biometric prompt cancelled or unmatched)",
+            "78": "Interactive input required but unavailable (gitway hosts add without --yes; biometric backend unavailable when requested)",
         }
     });
     println!("{schema}");
@@ -1264,16 +1271,61 @@ async fn authenticate_with_prompt(
         .await
 }
 
-/// Collects a key passphrase, preferring `SSH_ASKPASS` over a terminal prompt (FR-10).
+/// Collects a key passphrase for the key at `path`.
+///
+/// Resolution order:
+/// 1. **Biometric unlock** — when the key is enrolled for biometric unlock and
+///    a backend is available, a fingerprint releases the stored passphrase
+///    (see [`biometric`]).  Any failure (not enrolled, cancelled, unavailable)
+///    silently falls through to the interactive prompt, so biometric is purely
+///    additive and never blocks a Git operation.
+/// 2. [`try_askpass`] — used when `SSH_ASKPASS` is set and the conditions
+///    described there are met (GUI environment or `SSH_ASKPASS_REQUIRE` set).
+/// 3. [`rpassword`] — falls back to a terminal prompt.
+///
+/// The returned string is wrapped in [`Zeroizing`] so the bytes are overwritten
+/// before the allocation is released (NFR-3).
+pub(crate) fn prompt_passphrase(path: &std::path::Path) -> Result<Zeroizing<String>, AnvilError> {
+    if let Some(passphrase) = biometric_auto_unlock(path) {
+        return Ok(passphrase);
+    }
+    prompt_passphrase_interactive(path)
+}
+
+/// Attempt biometric unlock for the key at `path`, parsing the (clear) public
+/// half to derive its key id.  Returns `None` on any error so the caller falls
+/// back to a typed passphrase.  Shares the verify-and-self-heal logic with
+/// `gitway agent add` / `gitway-add`: a stored passphrase that no longer
+/// decrypts the key is forgotten so the transport never prompt-then-fails in a
+/// loop.
+fn biometric_auto_unlock(path: &std::path::Path) -> Option<Zeroizing<String>> {
+    let pem = std::fs::read_to_string(path).ok()?;
+    let key = ssh_key::PrivateKey::from_openssh(&pem).ok()?;
+    match biometric::auto_unlock_passphrase(&key) {
+        biometric::AutoUnlock::Passphrase(passphrase) => Some(passphrase),
+        biometric::AutoUnlock::Stale => {
+            eprintln!(
+                "gitway: stored biometric passphrase no longer decrypts {} — \
+                 removed stale enrollment",
+                path.display()
+            );
+            None
+        }
+        biometric::AutoUnlock::Fallback => None,
+    }
+}
+
+/// Collects a key passphrase interactively, preferring `SSH_ASKPASS` over a
+/// terminal prompt (FR-10) — the non-biometric path.  Used directly during
+/// `gitway biometric enroll`, where a typed passphrase is always required.
 ///
 /// Resolution order:
 /// 1. [`try_askpass`] — used when `SSH_ASKPASS` is set and the conditions
 ///    described there are met (GUI environment or `SSH_ASKPASS_REQUIRE` set).
 /// 2. [`rpassword`] — falls back to a terminal prompt.
-///
-/// The returned string is wrapped in [`Zeroizing`] so the bytes are overwritten
-/// before the allocation is released (NFR-3).
-pub(crate) fn prompt_passphrase(path: &std::path::Path) -> Result<Zeroizing<String>, AnvilError> {
+pub(crate) fn prompt_passphrase_interactive(
+    path: &std::path::Path,
+) -> Result<Zeroizing<String>, AnvilError> {
     let prompt = format!("Enter passphrase for {}: ", path.display());
 
     if let Some(passphrase) = try_askpass(&prompt)? {

@@ -39,6 +39,14 @@
         cargoBuildFlags = [ "-p" "gitway" ];
         cargoTestFlags  = [ "--workspace" ];
 
+        # Ship the platform biometric backends in the installed binaries (this is
+        # what the release tarballs / .deb / .rpm build with — see release.yml).
+        # The feature is cfg-gated per platform, so a Linux build pulls only the
+        # musl-clean `zbus`/`oo7` stack.  Tests stay at default features above:
+        # the Nix sandbox has no D-Bus, and `is_available()` returns false there
+        # gracefully, so the pure unit tests do not need the backend.
+        buildFeatures = [ "biometric" ];
+
         # aws-lc-rs non-FIPS build: requires perl for the assembly pre-processing
         # step. cmake and go are NOT required for non-FIPS builds.
         nativeBuildInputs = with pkgs; [

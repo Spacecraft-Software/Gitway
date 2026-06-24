@@ -105,6 +105,15 @@ pub enum GitwaySubcommand {
     /// trust set (built-in + user file + CA + revoked) in human or
     /// JSON form.
     Hosts(HostsArgs),
+    /// Enroll keys for biometric (fingerprint) unlock — enroll, forget,
+    /// list, status.
+    ///
+    /// Stores a key's passphrase in the OS secure keystore (Linux Secret
+    /// Service, macOS Keychain, Windows Credential Locker) so a fingerprint
+    /// can release it at load time instead of typed input.  `gitway biometric
+    /// status` reports the platform's security-binding strength — on Linux the
+    /// fingerprint is an advisory gate, not a security boundary.
+    Biometric(BiometricArgs),
 }
 
 // ── Keygen arguments ──────────────────────────────────────────────────────────
@@ -324,6 +333,66 @@ pub struct AgentAddArgs {
     /// (matches `ssh-add -c`). Support is agent-dependent.
     #[arg(short = 'c', long = "confirm", action = ArgAction::SetTrue)]
     pub confirm: bool,
+
+    /// Enroll the key for biometric unlock while loading it: prompt for the
+    /// passphrase once, store it in the OS keystore behind a fingerprint
+    /// check, then load the key.  Later loads unlock with a fingerprint
+    /// automatically.  Mutually exclusive with `--no-biometric`.
+    #[arg(long = "biometric", action = ArgAction::SetTrue, conflicts_with = "no_biometric")]
+    pub biometric: bool,
+
+    /// Force a typed passphrase even if this key is enrolled for biometric
+    /// unlock (escape hatch).  Mutually exclusive with `--biometric`.
+    #[arg(long = "no-biometric", action = ArgAction::SetTrue, conflicts_with = "biometric")]
+    pub no_biometric: bool,
+}
+
+// ── Biometric arguments ───────────────────────────────────────────────────────
+
+/// Top-level flags + nested subcommand for `gitway biometric`.
+#[derive(Debug, Args)]
+pub struct BiometricArgs {
+    #[command(subcommand)]
+    pub command: BiometricSubcommand,
+}
+
+/// Subcommands under `gitway biometric`.
+#[derive(Debug, Subcommand)]
+pub enum BiometricSubcommand {
+    /// Enroll one or more keys: prompt for each passphrase once, verify it
+    /// decrypts the key, then store it in the OS keystore behind a biometric
+    /// check.  Defaults to `~/.ssh/id_ed25519` (then ecdsa, rsa) when no file
+    /// is given.
+    Enroll(BiometricEnrollArgs),
+    /// Remove biometric enrollment for one or more keys, or all of them with
+    /// `--all`.  The stored passphrase is deleted from the OS keystore.
+    Forget(BiometricForgetArgs),
+    /// List keys currently enrolled for biometric unlock.
+    List,
+    /// Report whether a biometric backend is available and its
+    /// security-binding strength (hardware-bound / dpapi-consent / advisory).
+    Status,
+}
+
+/// Arguments for `gitway biometric enroll`.
+#[derive(Debug, Args)]
+pub struct BiometricEnrollArgs {
+    /// Private-key paths to enroll.  Defaults to `~/.ssh/id_ed25519`
+    /// (then `~/.ssh/id_ecdsa`, `~/.ssh/id_rsa`) when omitted.
+    #[arg(value_name = "FILE")]
+    pub files: Vec<PathBuf>,
+}
+
+/// Arguments for `gitway biometric forget`.
+#[derive(Debug, Args)]
+pub struct BiometricForgetArgs {
+    /// Private-key paths to un-enroll.
+    #[arg(value_name = "FILE")]
+    pub files: Vec<PathBuf>,
+
+    /// Remove every Gitway biometric enrollment from the keystore.
+    #[arg(long = "all", action = ArgAction::SetTrue, conflicts_with = "files")]
+    pub all: bool,
 }
 
 /// Arguments for `gitway agent list`.

@@ -79,6 +79,16 @@ fn main() -> ExitCode {
 }
 
 fn run(args: &[String]) -> Result<u32, AnvilError> {
+    // `--help` / `-?` print usage to stdout and exit 0, before the argv parser
+    // (so they never trip the "unsupported flag" path).  `-h` is intentionally
+    // NOT treated as help: in ssh-keygen `-h` requests a host certificate, and
+    // this shim mirrors ssh-keygen's flag meanings.  Git never invokes `--help`
+    // (it uses the `-Y` verbs), so emitting help on stdout here is safe.
+    if args.iter().any(|a| matches!(a.as_str(), "--help" | "-?")) {
+        print_help();
+        return Ok(0);
+    }
+
     let parsed = Parsed::from_args(args)?;
     match parsed.mode {
         Mode::GenerateKey => run_generate(&parsed),
@@ -90,6 +100,41 @@ fn run(args: &[String]) -> Result<u32, AnvilError> {
         Mode::SshSigCheckNoValidate => run_check_novalidate(&parsed),
         Mode::SshSigFindPrincipals => run_find_principals(&parsed),
     }
+}
+
+/// Print the `--help` usage text to stdout.  Mirrors the supported-flag table
+/// in this file's header; kept in sync by hand (there is no clap here).
+fn print_help() {
+    println!(
+        "gitway-keygen — ssh-keygen-compatible shim for git's gpg.ssh.program slot
+
+Usage: gitway-keygen [OPTIONS]
+
+Key generation / inspection:
+  -t TYPE              Algorithm: ed25519 | ecdsa | rsa
+  -b BITS              RSA size or ECDSA curve
+  -f FILE              Output / input key path
+  -N PP                New passphrase ('' = unencrypted)
+  -P PP                Old passphrase
+  -C CMT               Comment
+  -l                   Print the fingerprint of -f FILE
+  -y                   Print the public key from the private key at -f FILE
+  -p                   Change the passphrase of the key at -f FILE
+  -E sha256|sha512     Fingerprint hash
+
+SSHSIG (git commit / tag signing):
+  -Y sign              Produce an SSHSIG over stdin to stdout
+  -Y verify            Verify an SSHSIG against an allowed-signers file
+  -Y check-novalidate  Verify SSHSIG shape only
+  -Y find-principals   Find principals in allowed-signers for an SSHSIG
+  -n NAMESPACE         SSHSIG namespace (git uses 'git')
+  -I IDENTITY          Signer identity for verify
+  -s SIG               Signature file for verify
+
+  --help, -?           Show this help and exit
+
+For the ergonomic native UX (subcommand verbs and --json), use `gitway keygen`."
+    );
 }
 
 // ── Mode enum ─────────────────────────────────────────────────────────────────

@@ -33,7 +33,7 @@ use crate::cli::{
     AgentAddArgs, AgentListArgs, AgentLockArgs, AgentRemoveArgs, AgentStartArgs, AgentStopArgs,
     AgentSubcommand, HashKind,
 };
-use crate::{emit_json, emit_json_line, metadata_block, prompt_passphrase, OutputMode};
+use crate::{emit_json, emit_json_line, metadata_block, OutputMode};
 
 use anvil_ssh::agent::daemon::{self, AgentDaemonConfig};
 
@@ -75,10 +75,32 @@ fn run_add(args: &AgentAddArgs, mode: OutputMode) -> Result<u32, AnvilError> {
     };
     let mut agent = Agent::from_env()?;
     let lifetime = args.lifetime.map(Duration::from_secs);
+    let unlock = gitway::biometric::UnlockMode::from_flags(args.biometric, args.no_biometric);
+    // Identities the agent already holds — re-adding a still-loaded key can skip
+    // the passphrase/biometric prompt.  Best effort: an unlistable (locked) agent
+    // falls through to the normal add path rather than failing.
+    let loaded = agent.list().unwrap_or_default();
     let mut added = Vec::<String>::with_capacity(paths.len());
+    let mut already_loaded = Vec::<String>::new();
     for path in &paths {
-        let key = load_private_key(path)?;
-        agent.add(&key, lifetime, args.confirm)?;
+        let pem = fs::read_to_string(path)?;
+        let key = PrivateKey::from_openssh(&pem).map_err(|e| {
+            AnvilError::invalid_config(format!("cannot parse {}: {e}", path.display()))
+        })?;
+        // `--biometric` (Enroll) must always run so it can (re)store the
+        // passphrase behind the keystore, even when the key is already loaded.
+        if unlock != gitway::biometric::UnlockMode::Enroll {
+            let want = fingerprint(key.public_key(), HashAlg::Sha256);
+            if loaded
+                .iter()
+                .any(|id| fingerprint(&id.public_key, HashAlg::Sha256) == want)
+            {
+                already_loaded.push(path.display().to_string());
+                continue;
+            }
+        }
+        let decrypted = load_private_key(path, key, unlock)?;
+        agent.add(&decrypted, lifetime, args.confirm)?;
         added.push(path.display().to_string());
     }
 
@@ -96,6 +118,9 @@ fn run_add(args: &AgentAddArgs, mode: OutputMode) -> Result<u32, AnvilError> {
         OutputMode::Human => {
             for p in &added {
                 eprintln!("gitway: identity added: {p}");
+            }
+            for p in &already_loaded {
+                eprintln!("gitway: identity already loaded: {p}");
             }
         }
     }
@@ -119,18 +144,56 @@ fn default_key_paths() -> Result<Vec<std::path::PathBuf>, AnvilError> {
     Ok(found)
 }
 
-/// Loads and (if necessary) decrypts a private key, prompting for the
-/// passphrase via the shared `prompt_passphrase` helper.
-fn load_private_key(path: &Path) -> Result<PrivateKey, AnvilError> {
-    let pem = fs::read_to_string(path)?;
-    let key = PrivateKey::from_openssh(&pem)
-        .map_err(|e| AnvilError::invalid_config(format!("cannot parse {}: {e}", path.display())))?;
+/// Decrypts an already-parsed private key (when encrypted), honoring the
+/// biometric `unlock` mode (FR — biometric unlock).
+///
+/// - [`UnlockMode::Disabled`] always prompts for a typed passphrase.
+/// - [`UnlockMode::Enroll`] prompts once, verifies, stores the passphrase
+///   behind a biometric check, then loads.
+/// - [`UnlockMode::Auto`] uses biometric when the key is enrolled and a backend
+///   is available (auto-forgetting a stale enrollment that no longer decrypts),
+///   otherwise prompts.
+fn load_private_key(
+    path: &Path,
+    key: PrivateKey,
+    unlock: gitway::biometric::UnlockMode,
+) -> Result<PrivateKey, AnvilError> {
+    use gitway::biometric::{self, AutoUnlock, UnlockMode};
+
     if !key.is_encrypted() {
         return Ok(key);
     }
-    let pp: Zeroizing<String> = prompt_passphrase(path)?;
-    key.decrypt(pp.as_bytes())
-        .map_err(|e| AnvilError::signing(format!("failed to decrypt {}: {e}", path.display())))
+
+    let decrypt = |pp: &Zeroizing<String>| {
+        key.decrypt(pp.as_bytes())
+            .map_err(|e| AnvilError::signing(format!("failed to decrypt {}: {e}", path.display())))
+    };
+    let id = biometric::key_id(&key);
+
+    match unlock {
+        UnlockMode::Disabled => decrypt(&crate::prompt_passphrase_interactive(path)?),
+        UnlockMode::Enroll => {
+            let pp = crate::prompt_passphrase_interactive(path)?;
+            let decrypted = decrypt(&pp)?;
+            match biometric::vault().store(&id, &pp) {
+                Ok(()) => eprintln!("gitway: enrolled {} for biometric unlock", path.display()),
+                Err(e) => eprintln!("gitway: warning: biometric enrollment failed: {e}"),
+            }
+            Ok(decrypted)
+        }
+        UnlockMode::Auto => match biometric::auto_unlock_passphrase(&key) {
+            AutoUnlock::Passphrase(pp) => decrypt(&pp),
+            AutoUnlock::Stale => {
+                eprintln!(
+                    "gitway: stored biometric passphrase no longer decrypts {} — \
+                     removed stale enrollment",
+                    path.display()
+                );
+                decrypt(&crate::prompt_passphrase_interactive(path)?)
+            }
+            AutoUnlock::Fallback => decrypt(&crate::prompt_passphrase_interactive(path)?),
+        },
+    }
 }
 
 // ── list ──────────────────────────────────────────────────────────────────────
