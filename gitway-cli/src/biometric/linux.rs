@@ -14,6 +14,7 @@
 //! surfaces to users.
 
 use std::future::Future;
+use std::io::IsTerminal as _;
 use std::time::Duration;
 
 use futures_lite::StreamExt as _;
@@ -300,6 +301,12 @@ async fn scan(device: &FprintDeviceProxy<'_>) -> Result<bool> {
         .await
         .map_err(|e| BiometricError::Backend(format!("verify start: {e}")))?;
 
+    // The sensor is now armed.  fprintd has no UI of its own, so without this
+    // the load path blocks for up to VERIFY_TIMEOUT with nothing to tell the
+    // user a fingerprint is expected — the behaviour reported as "no indication
+    // it is waiting."  Interactive stderr only; see hint().
+    hint("Touch the fingerprint sensor to unlock the SSH key…");
+
     let matched = timeout(VERIFY_TIMEOUT, async {
         while let Some(signal) = status.next().await {
             let args = signal
@@ -309,7 +316,11 @@ async fn scan(device: &FprintDeviceProxy<'_>) -> Result<bool> {
                 // Terminal event: anything other than a match is a failure.
                 return Ok(args.result().as_str() == "verify-match");
             }
-            // Non-terminal retry hints (verify-retry-scan, …) — keep waiting.
+            // Non-terminal event: fprintd wants another scan.  Surface why the
+            // swipe didn't take so a retry isn't mistaken for a hang.
+            if let Some(retry) = retry_message(args.result().as_str()) {
+                hint(retry);
+            }
         }
         // Stream ended without a terminal event.
         Ok::<bool, BiometricError>(false)
@@ -319,6 +330,30 @@ async fn scan(device: &FprintDeviceProxy<'_>) -> Result<bool> {
     // A timeout is treated as "not verified" rather than an error so the caller
     // maps it to Cancelled (exit 73 in the explicit path) consistently.
     matched.unwrap_or(Ok(false))
+}
+
+/// Write an interactive fingerprint-prompt hint to stderr — but only when
+/// stderr is a terminal, so piped, agent, and CI callers get no noise (they
+/// have no finger to offer, and stdout must stay clean for pack/JSON data).
+/// Unprefixed and uncolored, matching the passphrase prompts (Gitway emits no
+/// ANSI).
+fn hint(msg: &str) {
+    if std::io::stderr().is_terminal() {
+        eprintln!("{msg}");
+    }
+}
+
+/// Map a non-terminal `fprintd` `VerifyStatus` result to a user-facing retry
+/// hint, or `None` for progress signals that warrant no message.  The match
+/// arms are fprintd's documented advisories for a scan that did not take.
+fn retry_message(result: &str) -> Option<&'static str> {
+    match result {
+        "verify-retry-scan" => Some("Fingerprint not read cleanly — touch the sensor again."),
+        "verify-swipe-too-short" => Some("Swipe was too short — touch the sensor again."),
+        "verify-finger-not-centered" => Some("Center your finger on the sensor and try again."),
+        "verify-remove-and-retry" => Some("Remove your finger, then touch the sensor again."),
+        _ => None,
+    }
 }
 
 /// Apply a deadline to `future`, mapping expiry to a [`BiometricError`].
