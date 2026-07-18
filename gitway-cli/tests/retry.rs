@@ -312,7 +312,7 @@ fn attempts_one_skips_retry_delay() {
 /// default `tracing-subscriber` formatter).  The test locates the last line
 /// starting with `{` to extract the JSON blob before asserting its shape.
 ///
-/// This exercises the JSON error-output path (SFRS Rule 1) together with
+/// This exercises the JSON error-output path (CLI Standard Rule 1) together with
 /// the new retry/timeout CLI flags (FR-80, FR-83) and confirms no panic
 /// occurs on the failure path.
 #[test]
@@ -348,7 +348,7 @@ fn test_json_error_has_error_key_when_connect_fails() {
 
     let blob: serde_json::Value = serde_json::from_str(json_line).unwrap_or_else(|e| {
         panic!(
-            "JSON blob is not valid JSON (SFRS Rule 1 violation): {e}; \
+            "JSON blob is not valid JSON (CLI Standard Rule 1 violation): {e}; \
              line={json_line:?}"
         )
     });

@@ -19,7 +19,7 @@ use gitway::biometric::{
     self, key_id, key_id_from_fingerprint, BiometricError, BiometricVault, Tier,
 };
 
-// Exit codes (SFRS Rule 2 / docs/exit-codes.md).
+// Exit codes (CLI Standard Rule 2 / docs/exit-codes.md).
 const EXIT_OK: u32 = 0;
 const EXIT_GENERAL: u32 = 1;
 const EXIT_USAGE: u32 = 2;

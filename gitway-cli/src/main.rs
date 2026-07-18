@@ -54,7 +54,7 @@ pub(crate) enum OutputMode {
 
 /// Detects the output mode for diagnostic commands.
 ///
-/// Precedence (SFRS Section 4.1):
+/// Precedence (the CLI Standard Section 4.1):
 /// 1. Explicit `--json` or `--format json` flag.
 /// 2. `AI_AGENT=1`, `AGENT=1`, or `CI=true` environment variable.
 /// 3. stdout is not a terminal (piped) — only checked when `check_tty` is true.
@@ -70,7 +70,7 @@ fn detect_output_mode(cli: &Cli, check_tty: bool) -> OutputMode {
         return OutputMode::Json;
     }
 
-    // 2. Agent / CI environment variable detection (SFRS Section 9).
+    // 2. Agent / CI environment variable detection (the CLI Standard Section 9).
     if is_agent_or_ci_env() {
         return OutputMode::Json;
     }
@@ -118,7 +118,7 @@ fn apply_alg_override(
 
 /// Returns `true` when a known agent or CI environment variable is set.
 ///
-/// Detects the full Spacecraft Software SFRS list (M20.2):
+/// Detects the full agent-env-var list defined by the CLI Standard (M20.2):
 /// - `AI_AGENT=1` — generic agent flag
 /// - `AGENT=1` — short alias
 /// - `CI=true` — generic CI signal (case-insensitive)
@@ -165,7 +165,7 @@ fn is_agent_or_ci_env() -> bool {
 /// to avoid the per-packet hex-dump firehose; opt in via
 /// `--debug-categories=russh` or `RUST_LOG=russh=trace`.  When
 /// `RUST_LOG` is set in the environment, it takes precedence over
-/// the flag-derived filter (SFRS §3 env precedence) so power users
+/// the flag-derived filter (the CLI Standard §3 env precedence) so power users
 /// retain an escape hatch.
 ///
 /// Output goes exclusively to stderr (FR-67).  When
@@ -933,7 +933,7 @@ fn run_install(mode: OutputMode) -> Result<u32, AnvilError> {
 
 // ── schema subcommand ─────────────────────────────────────────────────────────
 
-/// Emits a JSON Schema (Draft 2020-12) describing all Gitway commands (SFRS Rule 4).
+/// Emits a JSON Schema (Draft 2020-12) describing all Gitway commands (CLI Standard Rule 4).
 #[expect(
     clippy::too_many_lines,
     reason = "the schema is one large literal — splitting it across helper \
@@ -1086,7 +1086,7 @@ fn run_schema() -> u32 {
 
 // ── describe subcommand ───────────────────────────────────────────────────────
 
-/// Emits the capability manifest for agent/CI tool discovery (SFRS Rule 4).
+/// Emits the capability manifest for agent/CI tool discovery (CLI Standard Rule 4).
 fn run_describe() -> u32 {
     let manifest = serde_json::json!({
         "tool": "gitway",

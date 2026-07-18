@@ -792,7 +792,7 @@ gitway keygen change-passphrase -f ~/.ssh/id_ed25519
 ```
 
 All subcommands honor `--json` / `--format json` and the agent-env
-detection rules documented under *Dual-mode output* (SFRS Rule 1).
+detection rules documented under *Dual-mode output* (CLI Standard Rule 1).
 
 ### `gitway sign` — SSHSIG signatures
 

@@ -30,7 +30,7 @@ use anvil_ssh::{AnvilConfig, AnvilError, AnvilSession};
 use crate::cli::{HostsAddArgs, HostsListArgs, HostsRevokeArgs, HostsSubcommand};
 use crate::{emit_json, metadata_block, OutputMode};
 
-// ── Exit codes (SFRS Rule 2 + M19 plan) ─────────────────────────────────────
+// ── Exit codes (CLI Standard Rule 2 + M19 plan) ──────────────────────────────
 
 /// Exit code 73 — user typed `n` at the FR-85 confirmation prompt.
 const EXIT_USER_DECLINED: u32 = 73;

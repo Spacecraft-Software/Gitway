@@ -20,7 +20,7 @@ use clap::{ArgAction, Args, Parser, Subcommand, ValueEnum};
 
 // ── Output format ─────────────────────────────────────────────────────────────
 
-/// Machine-readable output format (SFRS Rule 1).
+/// Machine-readable output format (CLI Standard Rule 1).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum OutputFormat {
     /// Structured JSON (for agents, CI pipelines, and shell scripting).
@@ -46,7 +46,7 @@ pub enum DebugFormat {
 
 // ── Subcommands ───────────────────────────────────────────────────────────────
 
-/// Optional subcommands for agent/CI discovery and key operations (SFRS Rule 4).
+/// Optional subcommands for agent/CI discovery and key operations (CLI Standard Rule 4).
 #[derive(Debug, Subcommand)]
 pub enum GitwaySubcommand {
     /// Emit the full JSON Schema (Draft 2020-12) for all Gitway commands.
@@ -777,7 +777,7 @@ pub struct Cli {
     #[arg(long = "max-retry-window", value_name = "SECONDS")]
     pub max_retry_window: Option<u64>,
 
-    // ── Output format (SFRS Rule 1) ───────────────────────────────────────────
+    // ── Output format (CLI Standard Rule 1) ───────────────────────────────────
     /// Emit structured JSON output (shorthand for `--format json`).
     ///
     /// Applies to `--test` and `--install`.  Errors are also written to

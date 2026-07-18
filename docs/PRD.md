@@ -113,7 +113,7 @@ This section defines the OpenSSH-replacement scope delivered in three phases:
 * **FR-28.** Print SHA-256 and SHA-512 fingerprints in the standard `SHA256:<base64>` format.
 * **FR-29.** Change or remove the passphrase on an existing private key in place.
 * **FR-30.** Derive / emit the public key from a private key file (`ssh-keygen -y` equivalent).
-* **FR-31.** Every subcommand honors the SFRS `--json` / `--format json` / `AI_AGENT|AGENT|CI` detection path; stdout stays clean in human mode.
+* **FR-31.** Every subcommand honors the CLI Standard's `--json` / `--format json` / `AI_AGENT|AGENT|CI` detection path; stdout stays clean in human mode.
 
 ### 5.7.2 SSHSIG signing (`gitway sign`, `gitway keygen sign|verify|check-novalidate|find-principals`)
 

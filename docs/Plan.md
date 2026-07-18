@@ -37,7 +37,7 @@ gitway-lib/
     hostkey.rs        pinned fingerprints for GitHub / GitLab / Codeberg
     relay.rs          bidirectional stdin/stdout/stderr relay
     config.rs         transport config builder
-    error.rs          unified error + SFRS exit codes
+    error.rs          unified error + the canonical exit-code map
     keygen.rs         Ed25519/ECDSA/RSA keygen
     sshsig.rs         SSHSIG sign/verify/check-novalidate/find-principals
     allowed_signers.rs   git allowed_signers parser

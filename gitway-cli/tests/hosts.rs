@@ -27,7 +27,7 @@ fn gitway() -> PathBuf {
 // `--json` flag — clap top-level globals must precede the subcommand
 // (`gitway --json hosts list`, not `gitway hosts list --json`), and
 // the env-var precedence is exactly how an agent / CI environment
-// would drive Gitway today (SFRS §9).  Subprocess piped-stdout is
+// would drive Gitway today (the CLI Standard §9).  Subprocess piped-stdout is
 // already JSON-promoted by `detect_output_mode`'s `check_tty` rule
 // for diagnostic commands, but pinning AI_AGENT=1 makes the contract
 // explicit in the test.

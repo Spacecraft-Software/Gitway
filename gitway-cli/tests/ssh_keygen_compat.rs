@@ -222,7 +222,7 @@ fn tampered_payload_is_rejected() {
         !verify_output.status.success(),
         "verify should have failed for tampered data"
     );
-    // Exit code should map to SignatureInvalid (4) per the SFRS table.
+    // Exit code should map to SignatureInvalid (4) per the canonical exit-code map.
     assert_eq!(verify_output.status.code(), Some(4));
 }
 
