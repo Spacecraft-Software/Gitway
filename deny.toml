@@ -151,6 +151,20 @@ ignore = [
     # fixed release; see CHANGELOG and `docs/security.md` for the
     # operator-facing description of the residual risk.
     { id = "RUSTSEC-2023-0071", reason = "rsa crate Marvin Attack — no patch available; only used for local keygen + SSHSIG signing; SSH auth uses Ed25519 by default; network jitter dominates at SSH timescales. See deny.toml comments and docs/security.md." },
+
+    # ── RUSTSEC-2026-0370/0371/0372 — zvariant, zbus_names, zvariant_derive unmaintained ──
+    # Not vulnerabilities: upstream merged these crates into `zbus` 6.0.0
+    # (as its `wire` module) and stopped publishing them standalone.
+    # They reach us only through the opt-in `biometric` feature on Linux
+    # (`zbus` 5 + `oo7` for the Secret Service keyring).
+    #
+    # No safe upgrade exists yet: `zbus` 6 needs Rust 1.89 (our MSRV is
+    # 1.88), and no released `oo7` supports `zbus` 6 (0.7.0-beta needs
+    # Rust 1.95).  Revisit when `oo7` ships a stable release on `zbus` 6
+    # and the MSRV moves.
+    { id = "RUSTSEC-2026-0370", reason = "zvariant unmaintained (merged into zbus 6); biometric-only; no zbus-6 oo7 release within MSRV 1.88" },
+    { id = "RUSTSEC-2026-0371", reason = "zbus_names unmaintained (merged into zbus 6); biometric-only; no zbus-6 oo7 release within MSRV 1.88" },
+    { id = "RUSTSEC-2026-0372", reason = "zvariant_derive unmaintained (merged into zbus 6); biometric-only; no zbus-6 oo7 release within MSRV 1.88" },
 ]
 
 # ── Sources ──────────────────────────────────────────────────────────────────
