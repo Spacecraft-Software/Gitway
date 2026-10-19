@@ -43,6 +43,18 @@ this project adheres to [Semantic Versioning](https://semver.org/).
   a loaded key no longer re-prompts for the passphrase.  Explicit `--biometric`
   enrollment still runs.
 
+### Fixed
+
+- **`gitway --test` (and Git transport) no longer reports "no identity key
+  found" when the server rejected the key.**  When the SSH agent held a key
+  but the server refused it (typically because the public key is not
+  registered with the provider), Anvil reports `NoKeyFound`, which Gitway
+  printed as "ensure a key exists in ~/.ssh/" with exit 0.  Gitway now
+  reclassifies this as an authentication failure: the message says the server
+  rejected the key, the hint points at the provider's key settings, and the
+  exit code is 4 (`PERMISSION_DENIED`).  `--test` also stops rewrapping auth
+  errors as `invalid configuration`, so their own hint and exit code survive.
+
 ## [1.0.4] — 2026-05-25
 
 A patch release fixing a SIGILL crash in pre-built binaries on machines

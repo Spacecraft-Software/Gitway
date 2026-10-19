@@ -813,9 +813,11 @@ async fn run_test(
                      use --identity to specify one, or ensure a key exists in ~/.ssh/"
                 );
             }
-            Err(e) => {
+            Err(_) => {
                 let _ = session.close().await;
-                return Err(AnvilError::invalid_config(e.to_string()));
+                // Return the error unchanged so its exit code and hint
+                // (e.g. "the server rejected your SSH key") survive.
+                return auth_result.map(|()| 0);
             }
         }
     }
@@ -1252,6 +1254,7 @@ async fn authenticate_with_prompt(
         Err(ref e) if e.is_key_encrypted() => {
             // Fall through to passphrase prompt below.
         }
+        Err(e) if e.is_no_key_found() => return Err(reclassify_no_key_found(config, e).await),
         Err(e) => return Err(e),
     }
 
@@ -1269,6 +1272,36 @@ async fn authenticate_with_prompt(
     session
         .authenticate_with_passphrase(config, &encrypted_path, &passphrase)
         .await
+}
+
+/// Turns a misleading "no key found" from [`AnvilSession::authenticate_best`]
+/// into "authentication failed" when keys were in fact offered.
+///
+/// Anvil's agent path reports `NoKeyFound` both when the agent is empty and
+/// when the server rejected every identity the agent offered.  The second case
+/// is a rejected key (usually one not registered with the provider), so
+/// telling the user to "ensure a key exists in ~/.ssh/" sends them looking in
+/// the wrong place.  If a key file exists on disk, or the agent holds at least
+/// one identity, a key was available and the server refused it.
+async fn reclassify_no_key_found(config: &AnvilConfig, err: AnvilError) -> AnvilError {
+    let key_on_disk = !matches!(
+        find_identity(config),
+        Ok(IdentityResolution::NotFound) | Err(_)
+    );
+    #[cfg(unix)]
+    let agent_has_keys = matches!(connect_agent().await, Ok(Some(_)));
+    #[cfg(not(unix))]
+    let agent_has_keys = false;
+
+    if key_on_disk || agent_has_keys {
+        log::debug!(
+            "auth: a key was available (on disk: {key_on_disk}, in agent: {agent_has_keys}) \
+             but the server rejected it"
+        );
+        AnvilError::authentication_failed()
+    } else {
+        err
+    }
 }
 
 /// Collects a key passphrase for the key at `path`.
