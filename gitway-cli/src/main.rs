@@ -1283,6 +1283,14 @@ async fn authenticate_with_prompt(
 /// telling the user to "ensure a key exists in ~/.ssh/" sends them looking in
 /// the wrong place.  If a key file exists on disk, or the agent holds at least
 /// one identity, a key was available and the server refused it.
+#[cfg_attr(
+    not(unix),
+    expect(
+        clippy::unused_async,
+        reason = "the agent check that requires `.await` is `#[cfg(unix)]`; \
+                  the function stays `async` so the call site is uniform."
+    )
+)]
 async fn reclassify_no_key_found(config: &AnvilConfig, err: AnvilError) -> AnvilError {
     let key_on_disk = !matches!(
         find_identity(config),
