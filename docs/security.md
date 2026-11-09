@@ -145,6 +145,50 @@ patched release.
 at every release.  Will be lifted as soon as RustCrypto/RSA cuts a
 patched version.
 
+### RUSTSEC-2026-0387 — timing variability in `crypto-bigint`
+
+**What it is.**  Several `crypto-bigint` operations meant to run in
+constant time (subtraction, division, Montgomery multiplication, limb
+equality, modular inversion) can take secret-dependent branches,
+depending on the compiler and CPU.  Code that does arithmetic on
+secret integers through these operations can leak information about
+the secret through timing or microarchitectural side channels.  The
+fix is in `crypto-bigint` 0.7.6
+([RustCrypto/crypto-bigint #1365](https://github.com/RustCrypto/crypto-bigint/pull/1365)).
+
+**Where Gitway is exposed.**
+
+- **ECDSA keys (P-256, P-384, P-521):** `crypto-bigint` 0.5.5, via
+  `ssh-key` 0.6.7 → `elliptic-curve` 0.13.  Covers `gitway keygen`,
+  SSHSIG signing (`gitway sign`, `gitway-keygen -Y sign`), and signing
+  in the Gitway agent daemon.  The 0.5 line has no patched release.
+- **RSA keys:** `crypto-bigint` 0.7.0-rc.28, via russh 0.60.3 →
+  `rsa` 0.10.0-rc.16.  russh pins this prerelease.
+
+**Why we ship anyway.**
+
+1. **The default Gitway key type is Ed25519**, which does not use
+   `crypto-bigint` and is not affected.
+2. **Transport crypto is unaffected.**  Key exchange and session
+   ciphers go through russh's constant-time `aws-lc-rs` backend.
+3. **The exposure is local.**  The leak is in secret-key arithmetic
+   on the signing machine; SSH network jitter hides it from a remote
+   observer.  The realistic attacker is someone who can run code on, or
+   precisely time, the same machine.  Unlike RUSTSEC-2023-0071, the
+   agent daemon may sign once per push, so such an attacker can
+   collect many samples.
+4. **No safe upgrade exists** in the reachable dependency tree.
+
+**What this means for users with ECDSA or RSA keys.**  If you sign
+with an ECDSA or RSA key on a machine shared with untrusted local
+users or workloads, switch to Ed25519 (`gitway keygen generate -t
+ed25519`) until this is lifted.
+
+**Tracking.**  Recorded in `deny.toml` `advisories.ignore`; reviewed
+at every release.  Will be lifted once `ssh-key` 0.7 (which uses
+`crypto-bigint` ≥ 0.7.6) and a russh release with a patched
+`rsa`/`crypto-bigint` are adopted.
+
 ## Defenses that intentionally do not exist (yet)
 
 | Gap | Why it's not in v1.0 | Tracked at |

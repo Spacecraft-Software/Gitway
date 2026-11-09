@@ -152,6 +152,43 @@ ignore = [
     # operator-facing description of the residual risk.
     { id = "RUSTSEC-2023-0071", reason = "rsa crate Marvin Attack — no patch available; only used for local keygen + SSHSIG signing; SSH auth uses Ed25519 by default; network jitter dominates at SSH timescales. See deny.toml comments and docs/security.md." },
 
+    # ── RUSTSEC-2026-0387 — crypto-bigint timing variability ─────────
+    # Several operations meant to be constant-time (subtraction, zero
+    # counting, division, Montgomery multiplication, `UintRef` equality,
+    # `BoxedMontyForm::invert`) can take secret-dependent branches,
+    # depending on compiler and CPU.  Patched only in `crypto-bigint`
+    # >= 0.7.6 (https://github.com/RustCrypto/crypto-bigint/pull/1365).
+    #
+    # We pull two affected versions, neither of which can be updated:
+    #
+    # - `crypto-bigint` 0.5.5 via `ssh-key` 0.6.7 -> `p256`/`p384`/`p521`
+    #   -> `elliptic-curve` 0.13.  This is the **ECDSA** path: keygen,
+    #   SSHSIG signing, and agent-daemon signing with ECDSA keys.  The
+    #   0.5 line has no patched release; leaving it needs `ssh-key` 0.7.
+    # - `crypto-bigint` 0.7.0-rc.28 via `russh` 0.60.3 -> `rsa`
+    #   0.10.0-rc.16 -> `crypto-primes`.  This is the **RSA** path in
+    #   russh's forked ssh-key.  russh pins the `rsa` prerelease, so
+    #   only a new russh release can move it to >= 0.7.6.
+    #
+    # Why we accept the risk for now:
+    #
+    # 1. **Ed25519, the default key type, is unaffected.**  Only users
+    #    who chose ECDSA or RSA keys reach the affected arithmetic.
+    # 2. **Transport crypto is not affected.**  Key exchange and the
+    #    session ciphers run through russh's `aws-lc-rs` backend.
+    # 3. **The exposure is local secret-key arithmetic.**  The leak is
+    #    a timing / microarchitectural side channel on the machine doing
+    #    the signing; network jitter hides it from a remote observer.
+    #    Unlike the RSA-0071 case, the agent daemon can sign many times
+    #    (once per push), so a co-located attacker able to time those
+    #    operations is the realistic threat.  docs/security.md tells
+    #    ECDSA and RSA users to prefer Ed25519.
+    # 4. **No safe upgrade exists** in the reachable dependency tree.
+    #
+    # Lift this ignore when `ssh-key` 0.7 (crypto-bigint >= 0.7.6) and a
+    # russh release with a patched `rsa`/`crypto-bigint` are adopted.
+    { id = "RUSTSEC-2026-0387", reason = "crypto-bigint timing variability; 0.5.5 (ECDSA via ssh-key 0.6.7) and 0.7.0-rc.28 (RSA via russh 0.60.3) have no reachable patched release; Ed25519 default unaffected; transport uses aws-lc-rs; local side channel only. See deny.toml comments and docs/security.md." },
+
     # ── RUSTSEC-2026-0370/0371/0372 — zvariant, zbus_names, zvariant_derive unmaintained ──
     # Not vulnerabilities: upstream merged these crates into `zbus` 6.0.0
     # (as its `wire` module) and stopped publishing them standalone.
