@@ -49,24 +49,37 @@ fn run_generate(args: GenerateArgs, mode: OutputMode) -> Result<u32, AnvilError>
     // so an early user abort does not waste key material.
     let passphrase = resolve_new_passphrase(&args.file, args.passphrase, args.no_passphrase)?;
 
-    let key = keygen::generate(kind, bits, &comment)?;
+    let key = generate_with_progress(kind, bits, &comment, mode)?;
     keygen::write_keypair(&key, &args.file, passphrase.as_ref())?;
 
     let fp = keygen::fingerprint(key.public_key(), HashAlg::Sha256);
     let pub_path = pub_path_for(&args.file);
+    let clipboard = if args.copy {
+        let line = key
+            .public_key()
+            .to_openssh()
+            .map_err(|e| AnvilError::invalid_config(format!("cannot encode public key: {e}")))?;
+        Some(gitway::term::clipboard::copy(&line))
+    } else {
+        None
+    };
 
     match mode {
         OutputMode::Json => {
+            let mut data = serde_json::json!({
+                "private_key_path": args.file,
+                "public_key_path": pub_path,
+                "algorithm": kind.cli_name(),
+                "encrypted": passphrase.is_some(),
+                "fingerprint": fp,
+                "comment": comment,
+            });
+            if let Some(outcome) = clipboard {
+                data["clipboard"] = outcome.to_json();
+            }
             emit_json(&serde_json::json!({
                 "metadata": metadata_block("gitway keygen generate"),
-                "data": {
-                    "private_key_path": args.file,
-                    "public_key_path": pub_path,
-                    "algorithm": kind.cli_name(),
-                    "encrypted": passphrase.is_some(),
-                    "fingerprint": fp,
-                    "comment": comment,
-                }
+                "data": data,
             }));
         }
         OutputMode::Human => {
@@ -74,9 +87,56 @@ fn run_generate(args: GenerateArgs, mode: OutputMode) -> Result<u32, AnvilError>
             eprintln!("gitway: wrote {}", args.file.display());
             eprintln!("gitway: wrote {}", pub_path.display());
             eprintln!("gitway: fingerprint {fp}");
+            if let Some(outcome) = clipboard {
+                report_copy(outcome, &pub_path);
+            }
         }
     }
     Ok(0)
+}
+
+/// Generates the key, announcing the wait when it can be noticeable.
+///
+/// RSA generation searches for large primes and takes seconds at 4096 bits;
+/// the other algorithms finish instantly, and flashing a progress indicator
+/// for them would only flicker the terminal tab.  For RSA, human mode gets a
+/// text line (the indicator is decorative and never the only signal), and the
+/// terminal gets an OSC 9;4 indeterminate indicator where that is safe.
+fn generate_with_progress(
+    kind: KeyType,
+    bits: Option<u32>,
+    comment: &str,
+    mode: OutputMode,
+) -> Result<PrivateKey, AnvilError> {
+    if kind != KeyType::Rsa {
+        return keygen::generate(kind, bits, comment);
+    }
+    if mode == OutputMode::Human {
+        eprintln!(
+            "gitway: generating {} key — this can take a few seconds…",
+            kind.cli_name()
+        );
+    }
+    let _progress = gitway::term::progress::indeterminate();
+    keygen::generate(kind, bits, comment)
+}
+
+/// Human-mode report for `--copy`.  OSC 52 fails silently on terminals that
+/// lack it, so the file holding the key is always named as well.
+fn report_copy(outcome: gitway::term::clipboard::CopyOutcome, pub_path: &Path) {
+    if outcome.sent() {
+        eprintln!(
+            "gitway: sent the public key to the terminal clipboard (OSC 52); \
+             if nothing was copied, your terminal lacks OSC 52 — copy it from {}",
+            pub_path.display(),
+        );
+    } else {
+        eprintln!(
+            "gitway: did not copy to the clipboard ({}); the public key is in {}",
+            outcome.reason(),
+            pub_path.display(),
+        );
+    }
 }
 
 fn resolve_kind(alg: KeyAlg, bits: Option<u32>) -> Result<(KeyType, Option<u32>), AnvilError> {
@@ -133,18 +193,31 @@ fn run_extract_public(args: &ExtractPublicArgs, mode: OutputMode) -> Result<u32,
         .output
         .clone()
         .unwrap_or_else(|| pub_path_for(&args.file));
+    let clipboard = if args.copy {
+        let line = fs::read_to_string(&out)?;
+        Some(gitway::term::clipboard::copy(line.trim_end()))
+    } else {
+        None
+    };
     match mode {
         OutputMode::Json => {
+            let mut data = serde_json::json!({
+                "private_key_path": args.file,
+                "public_key_path": out,
+            });
+            if let Some(outcome) = clipboard {
+                data["clipboard"] = outcome.to_json();
+            }
             emit_json(&serde_json::json!({
                 "metadata": metadata_block("gitway keygen extract-public"),
-                "data": {
-                    "private_key_path": args.file,
-                    "public_key_path": out,
-                }
+                "data": data,
             }));
         }
         OutputMode::Human => {
             eprintln!("gitway: wrote {}", out.display());
+            if let Some(outcome) = clipboard {
+                report_copy(outcome, &out);
+            }
         }
     }
     Ok(0)

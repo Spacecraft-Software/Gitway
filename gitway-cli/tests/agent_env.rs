@@ -2,15 +2,16 @@
 //! Integration tests for agent-env-var auto-detection of JSON output mode
 //! (M20.2, per the CLI Standard).
 //!
-//! Gitway's `is_agent_or_ci_env` (in `gitway-cli/src/main.rs`) auto-selects
-//! JSON output mode when any of these are set in the process environment:
+//! Gitway's detection (`gitway::agent_env`) is presence-based per the CLI
+//! Standard §5: JSON output mode is selected when
 //!
-//! - `AI_AGENT=1`
-//! - `AGENT=1`
-//! - `CI=true` (case-insensitive)
-//! - `CLAUDECODE=1`
-//! - `CURSOR_AGENT=1`
-//! - `GEMINI_CLI=1`
+//! - `AI_AGENT` is set to any non-empty value (real harnesses export
+//!   descriptive strings such as `claude-code_2-1-218_agent`, not `1`);
+//! - `AGENT` is set to any non-empty value;
+//! - `CI` is truthy (set, and not `false` / `0`).
+//!
+//! `CLAUDECODE`, `CURSOR_AGENT`, and `GEMINI_CLI` are informational only and
+//! must NOT select JSON on their own.
 //!
 //! Each test spawns `gitway --test --insecure-skip-host-check --port 1
 //! 127.0.0.1` (which deterministically fails because port 1 refuses
@@ -106,30 +107,34 @@ fn ci_env_uppercase_selects_json_mode() {
 }
 
 #[test]
-fn claudecode_env_selects_json_mode() {
-    let stderr = run_with_env("CLAUDECODE", "1");
+fn descriptive_ai_agent_value_selects_json_mode() {
+    // The value a live Claude Code session exports — the `== "1"` detector
+    // this replaces failed to recognise it.
+    let stderr = run_with_env("AI_AGENT", "claude-code_2-1-218_agent");
     assert!(
         contains_json_error_envelope(&stderr),
-        "CLAUDECODE=1 did not select JSON mode; stderr=\n{stderr}",
+        "descriptive AI_AGENT did not select JSON mode; stderr=\n{stderr}",
     );
 }
 
 #[test]
-fn cursor_agent_env_selects_json_mode() {
-    let stderr = run_with_env("CURSOR_AGENT", "1");
+fn ci_false_keeps_human_mode() {
+    let stderr = run_with_env("CI", "false");
     assert!(
-        contains_json_error_envelope(&stderr),
-        "CURSOR_AGENT=1 did not select JSON mode; stderr=\n{stderr}",
+        !contains_json_error_envelope(&stderr),
+        "CI=false unexpectedly selected JSON mode; stderr=\n{stderr}",
     );
 }
 
 #[test]
-fn gemini_cli_env_selects_json_mode() {
-    let stderr = run_with_env("GEMINI_CLI", "1");
-    assert!(
-        contains_json_error_envelope(&stderr),
-        "GEMINI_CLI=1 did not select JSON mode; stderr=\n{stderr}",
-    );
+fn informational_env_vars_do_not_select_json_mode() {
+    for name in ["CLAUDECODE", "CURSOR_AGENT", "GEMINI_CLI"] {
+        let stderr = run_with_env(name, "1");
+        assert!(
+            stderr.contains("gitway: error:") && !contains_json_error_envelope(&stderr),
+            "{name}=1 changed the output mode; stderr=\n{stderr}",
+        );
+    }
 }
 
 #[test]

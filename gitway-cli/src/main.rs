@@ -56,7 +56,7 @@ pub(crate) enum OutputMode {
 ///
 /// Precedence (the CLI Standard Section 4.1):
 /// 1. Explicit `--json` or `--format json` flag.
-/// 2. `AI_AGENT=1`, `AGENT=1`, or `CI=true` environment variable.
+/// 2. `AI_AGENT` / `AGENT` set to any non-empty value, or `CI` truthy.
 /// 3. stdout is not a terminal (piped) — only checked when `check_tty` is true.
 /// 4. Fallback: human.
 ///
@@ -116,26 +116,14 @@ fn apply_alg_override(
     Ok(setter(builder, resolved))
 }
 
-/// Returns `true` when a known agent or CI environment variable is set.
+/// Returns `true` when an agent or CI harness is detected.
 ///
-/// Detects the full agent-env-var list defined by the CLI Standard (M20.2):
-/// - `AI_AGENT=1` — generic agent flag
-/// - `AGENT=1` — short alias
-/// - `CI=true` — generic CI signal (case-insensitive)
-/// - `CLAUDECODE=1` — Claude Code harness
-/// - `CURSOR_AGENT=1` — Cursor's agent mode
-/// - `GEMINI_CLI=1` — Google Gemini CLI
-///
-/// When any of these are set, machine-readable JSON output mode is
-/// selected automatically unless the caller explicitly passed
-/// `--no-json` / `--format=human`.
+/// Presence-based (CLI Standard §5): `AI_AGENT` / `AGENT` set to any
+/// non-empty value, or `CI` truthy.  `CLAUDECODE`, `CURSOR_AGENT`, and
+/// `GEMINI_CLI` are informational only and never select JSON on their own.
+/// See [`gitway::agent_env`].
 fn is_agent_or_ci_env() -> bool {
-    std::env::var_os("AI_AGENT").is_some_and(|v| v == "1")
-        || std::env::var_os("AGENT").is_some_and(|v| v == "1")
-        || std::env::var("CI").is_ok_and(|v| v.eq_ignore_ascii_case("true"))
-        || std::env::var_os("CLAUDECODE").is_some_and(|v| v == "1")
-        || std::env::var_os("CURSOR_AGENT").is_some_and(|v| v == "1")
-        || std::env::var_os("GEMINI_CLI").is_some_and(|v| v == "1")
+    gitway::agent_env::is_agent_or_ci()
 }
 
 // ── Tracing subscriber init (FR-65, FR-67, FR-68, FR-69) ────────────────────
@@ -172,7 +160,12 @@ fn is_agent_or_ci_env() -> bool {
 /// `--debug-format=json` (FR-68), records are emitted as one JSON
 /// object per line with `ts`, `level`, `target`, `message`, and any
 /// structured fields the call site provided.
-fn init_tracing_subscriber(verbose: u8, debug_format: DebugFormat, debug_categories: &[String]) {
+fn init_tracing_subscriber(
+    verbose: u8,
+    debug_format: DebugFormat,
+    debug_categories: &[String],
+    no_color: bool,
+) {
     use tracing_subscriber::EnvFilter;
 
     let default_directive = build_filter_directive(verbose, debug_categories);
@@ -188,6 +181,7 @@ fn init_tracing_subscriber(verbose: u8, debug_format: DebugFormat, debug_categor
         DebugFormat::Human => {
             let _ = tracing_subscriber::fmt()
                 .with_env_filter(filter)
+                .with_ansi(stderr_color_allowed(no_color))
                 .with_writer(std::io::stderr)
                 .with_target(true)
                 .try_init();
@@ -195,6 +189,7 @@ fn init_tracing_subscriber(verbose: u8, debug_format: DebugFormat, debug_categor
         DebugFormat::Json => {
             let _ = tracing_subscriber::fmt()
                 .with_env_filter(filter)
+                .with_ansi(false)
                 .with_writer(std::io::stderr)
                 .with_target(true)
                 .json()
@@ -203,6 +198,21 @@ fn init_tracing_subscriber(verbose: u8, debug_format: DebugFormat, debug_categor
                 .try_init();
         }
     }
+}
+
+/// Whether the human-format debug stream on stderr may carry ANSI styling.
+///
+/// Color precedence (CLI Standard `output-modes`): `--no-color`, a non-empty
+/// `NO_COLOR`, `TERM=dumb`, agent / CI mode, or a non-terminal stderr all
+/// turn it off.  Gitway's own messages never use color; this governs only
+/// `tracing-subscriber`'s level and field styling under `-v`.
+fn stderr_color_allowed(no_color: bool) -> bool {
+    use std::io::IsTerminal as _;
+    !no_color
+        && std::env::var_os("NO_COLOR").is_none_or(|v| v.is_empty())
+        && std::env::var_os("TERM").is_none_or(|v| v != "dumb")
+        && !is_agent_or_ci_env()
+        && std::io::stderr().is_terminal()
 }
 
 /// Builds the [`EnvFilter`] directive string for the given verbosity
@@ -312,7 +322,9 @@ pub(crate) fn now_iso8601() -> String {
 
 /// The frozen schema version for every JSON envelope Gitway emits (M20.2).
 ///
-/// Pinned at `"1.0.0"` for the Gitway 1.0 release.  The contract:
+/// Frozen at `"1.0.0"` for the Gitway 1.0 release; `1.0.1` added the
+/// accessibility / terminal-protocol keys to `describe` and `schema` and the
+/// `clipboard` object on `keygen … --copy` (additive only).  The contract:
 /// every `--json` envelope (and every always-JSON surface like `gitway
 /// schema` / `gitway describe`) carries this exact string under
 /// `metadata.schema_version`.  Downstream tooling — agents,
@@ -326,7 +338,7 @@ pub(crate) fn now_iso8601() -> String {
 ///   without coordinating with downstream consumers.
 ///
 /// See `docs/json-schema.md` for the full bump policy.
-pub(crate) const JSON_SCHEMA_VERSION: &str = "1.0.0";
+pub(crate) const JSON_SCHEMA_VERSION: &str = "1.0.1";
 
 /// Builds the standard JSON envelope `metadata` block (M20.2).
 ///
@@ -404,7 +416,29 @@ async fn main() {
 
     let cli = Cli::parse();
 
-    init_tracing_subscriber(cli.verbose, cli.debug_format, &cli.debug_categories);
+    init_tracing_subscriber(
+        cli.verbose,
+        cli.debug_format,
+        &cli.debug_categories,
+        cli.no_color,
+    );
+
+    // Standard §18.1 and tui-protocols §2.2: resolve accessible mode and the
+    // terminal-protocol state once, before any output, and report both (with
+    // the deciding source) under `--verbose`.
+    let a11y = gitway::a11y::init(cli.accessible_flag());
+    let protocols = gitway::term::init(cli.term_protocols.unwrap_or_default());
+    tracing::info!(
+        target: "gitway",
+        enabled = a11y.enabled(),
+        source = a11y.source().as_str(),
+        "accessible mode resolved",
+    );
+    tracing::info!(
+        target: "gitway",
+        state = %protocols.to_json(),
+        "terminal protocols resolved",
+    );
 
     // Error output mode: use explicit flags or agent env vars, but NOT TTY
     // detection — the exec path has a piped stdout that carries binary data.
@@ -785,7 +819,10 @@ async fn run_test(
         .collect();
 
     if mode == OutputMode::Human {
-        eprintln!("gitway: host-key verified ✓");
+        eprintln!(
+            "gitway: host-key verified{}",
+            gitway::a11y::current().check_mark()
+        );
     }
 
     let auth_result = if let Some((passphrase, path)) = pre_passphrase {
@@ -802,7 +839,10 @@ async fn run_test(
     if mode == OutputMode::Human {
         match &auth_result {
             Ok(()) => {
-                eprintln!("gitway: authentication successful ✓");
+                eprintln!(
+                    "gitway: authentication successful{}",
+                    gitway::a11y::current().check_mark()
+                );
                 if let Some(banner) = session.auth_banner() {
                     eprintln!("{banner}");
                 }
@@ -922,7 +962,10 @@ fn run_install(mode: OutputMode) -> Result<u32, AnvilError> {
                 println!("{json}");
             }
             OutputMode::Human => {
-                eprintln!("gitway: set core.sshCommand = gitway in global Git config ✓");
+                eprintln!(
+                    "gitway: set core.sshCommand = gitway in global Git config{}",
+                    gitway::a11y::current().check_mark()
+                );
             }
         }
         Ok(0)
@@ -999,7 +1042,10 @@ fn run_schema() -> u32 {
                 "subcommands": [
                     "generate", "fingerprint", "extract-public",
                     "change-passphrase", "sign", "verify"
-                ]
+                ],
+                "flags": {
+                    "--copy": { "type": "boolean", "applies_to": ["generate", "extract-public"], "description": "Also copy the public key to the clipboard via OSC 52; JSON output gains data.clipboard {sent, reason}" }
+                }
             },
             {
                 "name": "gitway sign",
@@ -1053,6 +1099,9 @@ fn run_schema() -> u32 {
             "--json": { "type": "boolean", "description": "Emit structured JSON output" },
             "--format": { "type": "string", "enum": ["json"], "description": "Output format" },
             "--no-color": { "type": "boolean", "description": "Disable colored output" },
+            "--accessible": { "type": "boolean", "description": "Standard §18 accessible mode: linear tables, no decorative glyphs, spelled-out prompts, no terminal animation. Env: SPACECRAFT_A11Y=1" },
+            "--no-accessible": { "type": "boolean", "description": "Force accessible mode off (beats SPACECRAFT_A11Y and the TERM=dumb / NO_COLOR hints)" },
+            "--term-protocols": { "type": "string", "pattern": "^[+-]?(all|keyboard|graphics|animation|clipboard|clipboard-rich|progress|pointer)(,[+-]?(all|keyboard|graphics|animation|clipboard|clipboard-rich|progress|pointer))*$", "description": "Override terminal-protocol detection, e.g. `-all` or `+progress`. Env: SPACECRAFT_TERM_PROTOCOLS. Never emits to a non-terminal or under an agent" },
             "--verbose": { "type": "integer", "description": "Verbosity counter (-v / -vv / -vvv); FR-65..FR-69" },
             "--debug-format": { "type": "string", "enum": ["human", "json"], "description": "Debug log format on stderr (FR-68)" },
             "--debug-categories": { "type": "string", "description": "Comma-separated debug categories: kex, auth, channel, config, retry, russh, anvil_ssh::* (FR-69)" },
@@ -1168,7 +1217,7 @@ fn run_describe() -> u32 {
             "gitway-add"
         ],
         "global_flags": ["--json", "--format", "--verbose", "--debug-format", "--debug-categories",
-                         "--no-color", "--insecure-skip-host-check", "--no-config",
+                         "--no-color", "--accessible", "--no-accessible", "--term-protocols", "--insecure-skip-host-check", "--no-config",
                          "--identity", "--cert", "--user", "--port",
                          "--proxy-command", "--jump-host",
                          "--connect-timeout", "--attempts", "--max-retry-window",
@@ -1176,10 +1225,37 @@ fn run_describe() -> u32 {
         "output_formats": ["json"],
         "mcp_available": false,
         "agent_env_vars": ["AI_AGENT", "AGENT", "CI", "CLAUDECODE", "CURSOR_AGENT", "GEMINI_CLI"],
+        "agent_mode_env_vars": gitway::agent_env::MODE_VARS,
+        "agent_informational_env_vars": gitway::agent_env::INFORMATIONAL_VARS,
+        "accessibility": describe_accessibility(),
+        "terminal_protocols": describe_terminal_protocols(),
         "providers": ["github.com", "gitlab.com", "codeberg.org"],
     });
     println!("{manifest}");
     0
+}
+
+/// The `describe.accessibility` block: the resolved Standard §18 state and
+/// how to change it.
+fn describe_accessibility() -> serde_json::Value {
+    serde_json::json!({
+        "resolved": gitway::a11y::current().to_json(),
+        "flag": "--accessible / --no-accessible",
+        "env_var": gitway::a11y::ENV_VAR,
+        "hints": ["TERM=dumb", "NO_COLOR", "GTK_MODULES=gail:atk"],
+        "default": false,
+    })
+}
+
+/// The `describe.terminal_protocols` block: the resolved
+/// `spacecraft-tui-protocols` state and how to override it.
+fn describe_terminal_protocols() -> serde_json::Value {
+    serde_json::json!({
+        "resolved": gitway::term::current().to_json(),
+        "flag": "--term-protocols",
+        "env_var": gitway::term::ENV_VAR,
+        "used": ["clipboard", "progress"],
+    })
 }
 
 // ── Pre-connection passphrase collection ─────────────────────────────────────

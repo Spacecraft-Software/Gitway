@@ -50,36 +50,48 @@ pub fn run(mode: OutputMode) -> Result<u32, AnvilError> {
 }
 
 fn emit_human_catalogue(cat: &anvil_ssh::algorithms::Catalogue) {
-    println!("# KEX");
-    for entry in &cat.kex {
-        println!("{}", format_entry(entry));
-    }
-    println!();
-    println!("# Ciphers");
-    for entry in &cat.cipher {
-        println!("{}", format_entry(entry));
-    }
-    println!();
-    println!("# MACs");
-    for entry in &cat.mac {
-        println!("{}", format_entry(entry));
-    }
-    println!();
-    println!("# Host-key algorithms");
-    for entry in &cat.host_key {
-        println!("{}", format_entry(entry));
+    let linear = gitway::a11y::current().enabled();
+    let sections = [
+        ("KEX", &cat.kex),
+        ("Ciphers", &cat.cipher),
+        ("MACs", &cat.mac),
+        ("Host-key algorithms", &cat.host_key),
+    ];
+    for (i, (title, entries)) in sections.into_iter().enumerate() {
+        if linear {
+            // Standard §18.2 tabular fallback: one `field: value` per line,
+            // a blank line between entries, no column alignment.
+            println!("{title}:");
+            println!();
+            for entry in entries {
+                println!("name: {}", entry.name);
+                println!("status: {}", status_of(entry));
+                println!();
+            }
+        } else {
+            if i > 0 {
+                println!();
+            }
+            println!("# {title}");
+            for entry in entries {
+                println!("{}", format_entry(entry));
+            }
+        }
     }
 }
 
-fn format_entry(entry: &AlgEntry) -> String {
-    let tag = if entry.denylisted {
+fn status_of(entry: &AlgEntry) -> &'static str {
+    if entry.denylisted {
         "denylisted"
     } else if entry.is_default {
         "default"
     } else {
         "available"
-    };
-    format!("{:<44} {tag}", entry.name)
+    }
+}
+
+fn format_entry(entry: &AlgEntry) -> String {
+    format!("{:<44} {}", entry.name, status_of(entry))
 }
 
 fn emit_json_catalogue(cat: &anvil_ssh::algorithms::Catalogue) {
