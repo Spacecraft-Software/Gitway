@@ -164,9 +164,11 @@ jobs:
 
   # ── Release binary size guard (Linux) ─────────────────────────────────────
   #
-  # S2: the stripped release binary must stay under 12 MB.  Raised from 10 MB
-  # in PRD v1.0 to absorb the v1.0 feature additions (tracing + hidapi etc.);
-  # the current v0.x line still fits comfortably under the old 10 MB.
+  # S2: the shipped release binary must stay under 12 MB.  Raised from 10 MB
+  # in PRD v1.0 to absorb the v1.0 feature additions (tracing + hidapi etc.).
+  # Measures the build users download — `--features biometric`, exactly as
+  # release.yml's .deb job builds it — with the [profile.release] settings in
+  # the root Cargo.toml (fat LTO, codegen-units = 1, stripped symbols).
   size-check:
     name: binary size ≤ 12 MB (S2)
     runs-on: ubuntu-latest
@@ -187,8 +189,8 @@ jobs:
           key: ${{ runner.os }}-cargo-size-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-size-
 
-      - name: Build release binary
-        run: cargo build --release -p gitway
+      - name: Build release binary (shipped feature set)
+        run: cargo build --release -p gitway --features biometric
 
       - name: Check binary size
         run: |

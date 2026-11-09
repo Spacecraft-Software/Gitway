@@ -93,6 +93,74 @@ rsa           = "0.9"
 # Dev / test helpers
 tempfile   = "3"
 
+# ── Release profile (Standard §3.2) ───────────────────────────────────────────
+#
+# Every applied and disabled flag is listed here so the build's flag state is
+# visible at compile time.  Measured locally on the shipped build
+# (`--features biometric`, x86_64 glibc, generic CPU): 20.34 MB as built with
+# Cargo's defaults, 10.21 MB with this profile — back under the S2 limit
+# (12 MB, see ci.yml size-check).  CI's runner image shifts the absolute
+# number by up to ~1.7 MB, which this leaves room for.
+#
+# Applied:
+# - `lto = "fat"` — whole-program LTO across all crates.  Thin LTO measured
+#   10.91 MB; fat LTO is smaller and is the Standard's default.  Rust-only:
+#   the C code in aws-lc-sys / mimalloc is not cross-language LTO'd.
+# - `codegen-units = 1` — lets LTO see one unit per crate; smaller and faster
+#   code at the cost of slower release builds.
+# - `strip = "symbols"` — drops the symbol table (≈3 MB).  Panic backtraces
+#   then show addresses, not function names; reproduce with a debug build or
+#   `CARGO_PROFILE_RELEASE_STRIP=none` when a symbolized trace is needed.
+#
+# Disabled / left at default:
+# - `panic = "abort"` — NOT set.  The Linux biometric worker relies on
+#   unwinding: `run_blocking` maps a worker-thread panic to an error via
+#   `join()`, so a backend bug degrades to the passphrase prompt instead of
+#   killing a push.
+# - `target-cpu=native` — never in release artifacts: CI and release.yml set
+#   `RUSTFLAGS=""` so shipped binaries run on any x86-64 (SIGILL otherwise).
+# - PGO — not set up; no stable profiling workload yet.
+[profile.release]
+lto           = "fat"
+codegen-units = 1
+strip         = "symbols"
+
+# Size-optimize the crates that are never on a hot path, so the shipped build
+# fits S2 when built by CI's pinned Rust 1.88 + gcc toolchain (12.19 MB with
+# the profile above alone).  Crypto — aws-lc-sys/aws-lc-rs, russh, and the
+# RustCrypto crates — stays at the profile's full optimization (Standard §3
+# Priority 2).  Each entry is a one-shot or cold path:
+# - clap_builder / clap_lex — argument parsing, once per process;
+# - zbus / zbus_names / zvariant / oo7 — the Linux Secret Service (D-Bus)
+#   keyring client behind `--features biometric`, one call per key load;
+# - tracing-subscriber / matchers / regex-automata / regex-syntax — the
+#   `-v` log filter, built once at startup;
+# - serde_json — the `--json` envelope, a handful of small documents.
+# Fat LTO re-optimizes across crates after per-crate codegen, so the
+# measured effect on the final binary is what counts (CI size-check).
+[profile.release.package.clap_builder]
+opt-level = "s"
+[profile.release.package.clap_lex]
+opt-level = "s"
+[profile.release.package.zbus]
+opt-level = "s"
+[profile.release.package.zbus_names]
+opt-level = "s"
+[profile.release.package.zvariant]
+opt-level = "s"
+[profile.release.package.oo7]
+opt-level = "s"
+[profile.release.package.tracing-subscriber]
+opt-level = "s"
+[profile.release.package.matchers]
+opt-level = "s"
+[profile.release.package.regex-automata]
+opt-level = "s"
+[profile.release.package.regex-syntax]
+opt-level = "s"
+[profile.release.package.serde_json]
+opt-level = "s"
+
 # ── Workspace-wide lints ──────────────────────────────────────────────────────
 
 [workspace.lints.rust]

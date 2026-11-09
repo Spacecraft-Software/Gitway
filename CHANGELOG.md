@@ -58,6 +58,13 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Smaller release binaries.**  A `[profile.release]` now enables fat LTO,
+  `codegen-units = 1`, and symbol stripping: the shipped Linux build
+  (`--features biometric`) drops from about 20 MB to about 10 MB.  Panic
+  backtraces in release builds show addresses instead of function names.
+- The CI size gate (S2, 12 MB) now measures the shipped `--features
+  biometric` build instead of the default-feature build, which no release
+  artifact uses.
 - **`gitway-add` and `gitway agent add` skip a key already loaded** in the agent
   (matched by public-key fingerprint) instead of re-decrypting it, so re-adding
   a loaded key no longer re-prompts for the passphrase.  Explicit `--biometric`
