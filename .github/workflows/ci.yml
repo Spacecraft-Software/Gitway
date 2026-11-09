@@ -202,16 +202,6 @@ jobs:
             exit 1
           fi
 
-      # TEMP (revert before merge): explain the CI-vs-local size gap.
-      - name: TEMP size diagnostics
-        if: always()
-        run: |
-          rustc -vV; cargo -V; cc --version | head -1; ld --version | head -1
-          size -A -d target/release/gitway | sort -k2 -n | tail -8
-          CARGO_PROFILE_RELEASE_STRIP=none CARGO_TARGET_DIR=target-sym cargo build --release -p gitway --features biometric
-          nm -S --size-sort target-sym/release/gitway | awk '{sz=strtonum("0x"$2); n=$4; if (n ~ /^_ZN/ || n ~ /^_R/) r+=sz; else if (n ~ /aws_lc|^bssl|^BN_|^EVP_|^OPENSSL|^ec_|^x25519|^sha|^aes/) a+=sz; else o+=sz} END {printf "rust=%.2fMB awslc=%.2fMB other=%.2fMB\n", r/1048576, a/1048576, o/1048576}'
-          nm -S --size-sort target-sym/release/gitway | tail -15
-
   # ── Nix flake check (Linux) ────────────────────────────────────────────────
   #
   # Guards against the flake drifting from the workspace Cargo.toml (stale
