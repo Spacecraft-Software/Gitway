@@ -72,6 +72,9 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Bump `tokio` 1.51.0 → 1.54.1 (RUSTSEC-2026-0386, `AsyncFd` I/O-safety
+  unsoundness) and `ctutils` 0.4.3 → 0.4.8 (RUSTSEC-2026-0385,
+  non-constant-time mask generation).  Both keep the MSRV at 1.88.
 - **`gitway --test` (and Git transport) no longer reports "no identity key
   found" when the server rejected the key.**  When the SSH agent held a key
   but the server refused it (typically because the public key is not
