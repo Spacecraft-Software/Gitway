@@ -151,7 +151,16 @@ async fn run_add(args: HostsAddArgs, mode: OutputMode) -> Result<u32, AnvilError
             );
             return Ok(EXIT_NEEDS_YES);
         }
-        eprint!("Append this fingerprint to {}? [y/N] ", path.display());
+        if gitway::a11y::current().enabled() {
+            // Standard §18.2 prompt legibility: question, every choice, and
+            // the default in plain text before input is read.
+            eprintln!("Append this fingerprint to {}? [y/N]", path.display());
+            eprintln!("  y = append the pin and trust this host key");
+            eprintln!("  N = keep known_hosts unchanged (default)");
+            eprint!("> ");
+        } else {
+            eprint!("Append this fingerprint to {}? [y/N] ", path.display());
+        }
         let _ = std::io::Write::flush(&mut std::io::stderr());
         let mut response = String::new();
         std::io::stdin()
@@ -352,44 +361,56 @@ fn run_list(args: &HostsListArgs, mode: OutputMode) -> Result<u32, AnvilError> {
         });
         emit_json(&envelope);
     } else {
-        // Human format: four sections, three columns each.
-        println!("# Embedded (built into anvil-ssh)");
+        // Human format: four sections.  Default presentation: three aligned
+        // columns.  Accessible mode (Standard §18.2): column alignment means
+        // nothing to a screen reader, so each entry is a `field: value` block.
+        let linear = gitway::a11y::current().enabled();
+        let section = |title: String| {
+            if linear {
+                println!("{title}:");
+                println!();
+            } else {
+                println!("# {title}");
+            }
+        };
+        let entry = |host: &str, fp: &str, kind_field: &str, kind: &str| {
+            if linear {
+                println!("host: {host}");
+                println!("fingerprint: {fp}");
+                println!("{kind_field}: {kind}");
+                println!();
+            } else {
+                println!("{host:<24} {fp:<60} {kind}");
+            }
+        };
+
+        section("Embedded (built into anvil-ssh)".to_owned());
         for (host, fp, alg) in &embedded {
-            println!("{host:<24} {fp:<60} {alg}");
+            entry(host, fp, "algorithm", alg);
         }
-        println!();
-        println!("# User pins ({})", path.display());
-        for entry in &parsed.direct {
-            println!(
-                "{host:<24} {fp:<60} direct",
-                host = entry.host_pattern,
-                fp = entry.fingerprint,
-            );
+        if !linear {
+            println!();
         }
-        for entry in &parsed.hashed {
-            println!(
-                "{host:<24} {fp:<60} direct",
-                host = "(hashed)",
-                fp = entry.fingerprint,
-            );
+        section(format!("User pins ({})", path.display()));
+        for e in &parsed.direct {
+            entry(&e.host_pattern, &e.fingerprint, "trust", "direct");
         }
-        println!();
-        println!("# Cert authorities");
-        for entry in &parsed.cert_authorities {
-            println!(
-                "{host:<24} {fp:<60} ca",
-                host = entry.host_pattern,
-                fp = entry.fingerprint,
-            );
+        for e in &parsed.hashed {
+            entry("(hashed)", &e.fingerprint, "trust", "direct");
         }
-        println!();
-        println!("# Revoked");
-        for entry in &parsed.revoked {
-            println!(
-                "{host:<24} {fp:<60} revoked",
-                host = entry.host_pattern,
-                fp = entry.fingerprint,
-            );
+        if !linear {
+            println!();
+        }
+        section("Cert authorities".to_owned());
+        for e in &parsed.cert_authorities {
+            entry(&e.host_pattern, &e.fingerprint, "trust", "ca");
+        }
+        if !linear {
+            println!();
+        }
+        section("Revoked".to_owned());
+        for e in &parsed.revoked {
+            entry(&e.host_pattern, &e.fingerprint, "trust", "revoked");
         }
     }
 

@@ -18,6 +18,25 @@ use std::path::PathBuf;
 
 use clap::{ArgAction, Args, Parser, Subcommand, ValueEnum};
 
+/// Clap value parser for `--term-protocols`.
+fn parse_term_protocols(list: &str) -> Result<gitway::term::Overrides, gitway::term::ParseError> {
+    gitway::term::parse_overrides(list)
+}
+
+impl Cli {
+    /// The `--accessible` / `--no-accessible` level of the §18.1 toggle.
+    #[must_use]
+    pub fn accessible_flag(&self) -> Option<bool> {
+        if self.accessible {
+            Some(true)
+        } else if self.no_accessible {
+            Some(false)
+        } else {
+            None
+        }
+    }
+}
+
 // ── Output format ─────────────────────────────────────────────────────────────
 
 /// Machine-readable output format (CLI Standard Rule 1).
@@ -191,6 +210,13 @@ pub struct GenerateArgs {
     /// Comment recorded in the key file (defaults to `user@host`).
     #[arg(short = 'C', long = "comment", value_name = "COMMENT")]
     pub comment: Option<String>,
+
+    /// Also copy the public key to the clipboard through the terminal
+    /// (OSC 52).  Works over SSH and in tmux with `set-clipboard on`; a
+    /// terminal without OSC 52 ignores it, so the key file path is always
+    /// reported too.  Never sent to a non-terminal or under an agent.
+    #[arg(long = "copy", action = ArgAction::SetTrue)]
+    pub copy: bool,
 }
 
 /// Arguments for `gitway keygen fingerprint`.
@@ -215,6 +241,13 @@ pub struct ExtractPublicArgs {
     /// Output path for the public key; defaults to `<FILE>.pub`.
     #[arg(short = 'o', long = "output", value_name = "OUT")]
     pub output: Option<PathBuf>,
+
+    /// Also copy the public key to the clipboard through the terminal
+    /// (OSC 52).  Works over SSH and in tmux with `set-clipboard on`; a
+    /// terminal without OSC 52 ignores it, so the key file path is always
+    /// reported too.  Never sent to a non-terminal or under an agent.
+    #[arg(long = "copy", action = ArgAction::SetTrue)]
+    pub copy: bool,
 }
 
 /// Arguments for `gitway keygen change-passphrase`.
@@ -787,14 +820,42 @@ pub struct Cli {
 
     /// Output format for diagnostic commands (`--test`, `--install`).
     ///
-    /// Omit for auto-detection: JSON is selected when `AI_AGENT=1`,
-    /// `AGENT=1`, `CI=true`, or stdout is not a terminal.
+    /// Omit for auto-detection: JSON is selected when `AI_AGENT` or `AGENT`
+    /// is set to any non-empty value, `CI` is truthy, or stdout is not a
+    /// terminal.
     #[arg(long = "format", value_enum, value_name = "FORMAT")]
     pub format: Option<OutputFormat>,
 
     /// Disable colored output (honours the `NO_COLOR` convention).
     #[arg(long = "no-color", action = ArgAction::SetTrue)]
     pub no_color: bool,
+
+    // ── Accessibility (Standard §18) ──────────────────────────────────────────
+    /// Turn on accessible mode: tables as one `field: value` per line, no
+    /// decorative glyphs, spelled-out prompt choices, no terminal animation.
+    ///
+    /// Beats `SPACECRAFT_A11Y` and the `TERM=dumb` / `NO_COLOR` hints.
+    #[arg(long = "accessible", action = ArgAction::SetTrue, global = true,
+          overrides_with = "no_accessible")]
+    pub accessible: bool,
+
+    /// Force accessible mode off, overriding `SPACECRAFT_A11Y` and every hint.
+    #[arg(long = "no-accessible", action = ArgAction::SetTrue, global = true,
+          overrides_with = "accessible")]
+    pub no_accessible: bool,
+
+    // ── Terminal protocols (spacecraft-tui-protocols §2.5) ────────────────────
+    /// Override terminal-protocol detection: a comma-separated list of
+    /// `+name` (force on) / `-name` (force off), e.g. `-all` or `+progress`.
+    ///
+    /// Names: `keyboard`, `graphics`, `animation`, `clipboard`,
+    /// `clipboard-rich`, `progress`, `pointer`, `all`.  Gitway uses
+    /// `clipboard` (OSC 52) and `progress` (OSC 9;4).  Layered over
+    /// `SPACECRAFT_TERM_PROTOCOLS`; never sends anything to a non-terminal
+    /// or under an agent.
+    #[arg(long = "term-protocols", value_name = "LIST", global = true,
+          allow_hyphen_values = true, value_parser = parse_term_protocols)]
+    pub term_protocols: Option<gitway::term::Overrides>,
 
     // ── Diagnostic ────────────────────────────────────────────────────────────
     /// Enable verbose debug logging to stderr (FR-65).  Repeatable —

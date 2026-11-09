@@ -306,6 +306,11 @@ async fn scan(device: &FprintDeviceProxy<'_>) -> Result<bool> {
     // user a fingerprint is expected — the behaviour reported as "no indication
     // it is waiting."  Interactive stderr only; see hint().
     hint("Touch the fingerprint sensor to unlock the SSH key…");
+    // Also mark the wait in the terminal tab / taskbar (OSC 9;4
+    // indeterminate) where that is safe; the text line above stays the
+    // primary signal.  Cleared when `scan` returns, and by the panic / signal
+    // hooks in `crate::term::progress` if the process dies mid-scan.
+    let _progress = crate::term::progress::indeterminate();
 
     let matched = timeout(VERIFY_TIMEOUT, async {
         while let Some(signal) = status.next().await {

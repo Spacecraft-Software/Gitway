@@ -6,6 +6,12 @@ MCP discovery layers, CI parsers, log shippers — can pin against
 this contract.
 
 **Frozen at:** `1.0.0` (Gitway v1.0.0).
+**Current:** `1.0.1` — additive: `describe` gained `accessibility`,
+`terminal_protocols`, `agent_mode_env_vars`, and
+`agent_informational_env_vars`; `schema` documents `--accessible`,
+`--no-accessible`, `--term-protocols`, and `keygen … --copy`; `keygen
+generate` / `extract-public` with `--copy` add `data.clipboard` (`{sent,
+reason}`), and only when `--copy` is given.
 **Source of truth:** [`JSON_SCHEMA_VERSION`][src] in
 `gitway-cli/src/main.rs`.
 

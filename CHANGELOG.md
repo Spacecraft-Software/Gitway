@@ -35,6 +35,26 @@ this project adheres to [Semantic Versioning](https://semver.org/).
   (also `-h` / `-?`) and `gitway-keygen --help` (also `-?`) now print a usage
   summary to stdout and exit 0, instead of failing with
   `error: unsupported flag: --help`.
+- **Terminal protocols** (`spacecraft-tui-protocols`), all behind one gate:
+  nothing is emitted when stderr is not a terminal, under an agent or CI, or
+  on a dumb terminal.
+  - `gitway keygen generate --copy` and `gitway keygen extract-public --copy`
+    copy the public key through the terminal (OSC 52), which also works over
+    SSH and in tmux.  The `.pub` path is always printed as well, and `--json`
+    gains `data.clipboard: {sent, reason}`.
+  - OSC 9;4 progress (indeterminate) in the terminal tab / taskbar during the
+    Linux fingerprint wait and RSA key generation, only on terminals known to
+    render it (so it never pops a desktop notification).  It is cleared on
+    exit, error, panic, and SIGINT/SIGTERM/SIGHUP.
+  - `--term-protocols=<list>` and `SPACECRAFT_TERM_PROTOCOLS` override detection
+    (`-all`, `+progress`, `-clipboard`, …); `gitway describe` reports each
+    protocol's resolved state and reason.
+- **Accessible mode** (Steelbore Standard §18): `--accessible` /
+  `--no-accessible` and `SPACECRAFT_A11Y`, plus the `TERM=dumb` / `NO_COLOR`
+  hints.  `hosts list` and `list-algorithms` render one `field: value` per
+  line, `✓` glyphs are dropped, and the `hosts add` prompt spells out each
+  choice and the default.  Off by default; the default output is unchanged.
+- `--verbose` reports the resolved accessible-mode and terminal-protocol state.
 
 ### Changed
 
@@ -42,6 +62,13 @@ this project adheres to [Semantic Versioning](https://semver.org/).
   (matched by public-key fingerprint) instead of re-decrypting it, so re-adding
   a loaded key no longer re-prompts for the passphrase.  Explicit `--biometric`
   enrollment still runs.
+- **Agent detection is presence-based** (CLI Standard §5): `AI_AGENT` / `AGENT`
+  now select JSON mode when set to any non-empty value, not only `1`, so a
+  harness exporting a descriptive value is recognized; `CI` counts when set
+  and not `false`/`0`.  `CLAUDECODE`, `CURSOR_AGENT`, and `GEMINI_CLI` no
+  longer switch the output mode on their own (informational only).
+- JSON `schema_version` is now `1.0.1` (additive keys only; see
+  `docs/json-schema.md`).
 
 ### Fixed
 
@@ -61,6 +88,8 @@ this project adheres to [Semantic Versioning](https://semver.org/).
   [RUSTSEC-2026-0153](https://rustsec.org/advisories/RUSTSEC-2026-0153)
   (unchecked `CryptoVec` growth).  `aes` is held at 0.9.2 in `Cargo.lock`
   so the MSRV stays at 1.88.
+- `-v` debug output no longer carries ANSI styling under `--no-color`,
+  `NO_COLOR`, `TERM=dumb`, agent mode, or a non-terminal stderr.
 
 ## [1.0.4] — 2026-05-25
 
