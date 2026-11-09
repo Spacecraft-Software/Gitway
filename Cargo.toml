@@ -125,6 +125,42 @@ lto           = "fat"
 codegen-units = 1
 strip         = "symbols"
 
+# Size-optimize the crates that are never on a hot path, so the shipped build
+# fits S2 when built by CI's pinned Rust 1.88 + gcc toolchain (12.19 MB with
+# the profile above alone).  Crypto — aws-lc-sys/aws-lc-rs, russh, and the
+# RustCrypto crates — stays at the profile's full optimization (Standard §3
+# Priority 2).  Each entry is a one-shot or cold path:
+# - clap_builder / clap_lex — argument parsing, once per process;
+# - zbus / zbus_names / zvariant / oo7 — the Linux Secret Service (D-Bus)
+#   keyring client behind `--features biometric`, one call per key load;
+# - tracing-subscriber / matchers / regex-automata / regex-syntax — the
+#   `-v` log filter, built once at startup;
+# - serde_json — the `--json` envelope, a handful of small documents.
+# Fat LTO re-optimizes across crates after per-crate codegen, so the
+# measured effect on the final binary is what counts (CI size-check).
+[profile.release.package.clap_builder]
+opt-level = "s"
+[profile.release.package.clap_lex]
+opt-level = "s"
+[profile.release.package.zbus]
+opt-level = "s"
+[profile.release.package.zbus_names]
+opt-level = "s"
+[profile.release.package.zvariant]
+opt-level = "s"
+[profile.release.package.oo7]
+opt-level = "s"
+[profile.release.package.tracing-subscriber]
+opt-level = "s"
+[profile.release.package.matchers]
+opt-level = "s"
+[profile.release.package.regex-automata]
+opt-level = "s"
+[profile.release.package.regex-syntax]
+opt-level = "s"
+[profile.release.package.serde_json]
+opt-level = "s"
+
 # ── Workspace-wide lints ──────────────────────────────────────────────────────
 
 [workspace.lints.rust]
