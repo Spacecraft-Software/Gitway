@@ -91,6 +91,15 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 - `-v` debug output no longer carries ANSI styling under `--no-color`,
   `NO_COLOR`, `TERM=dumb`, agent mode, or a non-terminal stderr.
 
+### Security
+
+- Accept RUSTSEC-2026-0387 (`crypto-bigint` timing variability) as a
+  documented residual risk: it affects ECDSA and RSA signing, has no
+  patched release reachable from the current dependency tree, and
+  does not affect Ed25519 keys (the default) or transport crypto.  See
+  `docs/security.md`; ECDSA and RSA users on shared machines should
+  prefer Ed25519.
+
 ## [1.0.4] — 2026-05-25
 
 A patch release fixing a SIGILL crash in pre-built binaries on machines
