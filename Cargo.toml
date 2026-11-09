@@ -93,6 +93,38 @@ rsa           = "0.9"
 # Dev / test helpers
 tempfile   = "3"
 
+# ── Release profile (Standard §3.2) ───────────────────────────────────────────
+#
+# Every applied and disabled flag is listed here so the build's flag state is
+# visible at compile time.  Measured locally on the shipped build
+# (`--features biometric`, x86_64 glibc, generic CPU): 20.34 MB as built with
+# Cargo's defaults, 10.21 MB with this profile — back under the S2 limit
+# (12 MB, see ci.yml size-check).  CI's runner image shifts the absolute
+# number by up to ~1.7 MB, which this leaves room for.
+#
+# Applied:
+# - `lto = "fat"` — whole-program LTO across all crates.  Thin LTO measured
+#   10.91 MB; fat LTO is smaller and is the Standard's default.  Rust-only:
+#   the C code in aws-lc-sys / mimalloc is not cross-language LTO'd.
+# - `codegen-units = 1` — lets LTO see one unit per crate; smaller and faster
+#   code at the cost of slower release builds.
+# - `strip = "symbols"` — drops the symbol table (≈3 MB).  Panic backtraces
+#   then show addresses, not function names; reproduce with a debug build or
+#   `CARGO_PROFILE_RELEASE_STRIP=none` when a symbolized trace is needed.
+#
+# Disabled / left at default:
+# - `panic = "abort"` — NOT set.  The Linux biometric worker relies on
+#   unwinding: `run_blocking` maps a worker-thread panic to an error via
+#   `join()`, so a backend bug degrades to the passphrase prompt instead of
+#   killing a push.
+# - `target-cpu=native` — never in release artifacts: CI and release.yml set
+#   `RUSTFLAGS=""` so shipped binaries run on any x86-64 (SIGILL otherwise).
+# - PGO — not set up; no stable profiling workload yet.
+[profile.release]
+lto           = "fat"
+codegen-units = 1
+strip         = "symbols"
+
 # ── Workspace-wide lints ──────────────────────────────────────────────────────
 
 [workspace.lints.rust]
